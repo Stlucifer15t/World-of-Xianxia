@@ -57,13 +57,21 @@ class AiUpgradeTest {
     }
     @Test fun cancellationStopsStreamingWithoutReplay() = runBlocking {
         MockWebServer().use { s ->
-            s.start(); s.enqueue(MockResponse().setHeader("Content-Type", "text/event-stream").setBody(chunk("The river") + chunk(stop = true) + "data: [DONE]\n\n").throttleBody(10, 1, TimeUnit.SECONDS))
-            // Isolate this fault-injection server from the shared pool tested separately above.
-            // Enqueue before awaiting the request: first-use client initialization must not race the assertion.
+            s.start()
+            val first = chunk("The river")
+            // Dispatcher.peek() stays unthrottled while reading the POST; only the response is slow.
+            s.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
+                override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest) = MockResponse()
+                    .setHeader("Content-Type", "text/event-stream")
+                    .setBody(first + chunk(" is quiet.") + chunk(stop = true) + "data: [DONE]\n\n")
+                    .throttleBody(first.toByteArray(Charsets.UTF_8).size.toLong(), 2, TimeUnit.SECONDS)
+            }
             val client = OkHttpClient.Builder().followRedirects(false).retryOnConnectionFailure(false).build()
             val narrator = CompatibleStoryteller(config(s), client, allowHttpForTests = true)
-            val job = launch(start = CoroutineStart.UNDISPATCHED) { narrator.narrateStreaming(context) {} }
+            val firstPreview = CompletableDeferred<String>()
+            val job = launch(start = CoroutineStart.UNDISPATCHED) { narrator.narrateStreaming(context) { firstPreview.complete(it) } }
             withContext(Dispatchers.IO) { assertNotNull(s.takeRequest(5, TimeUnit.SECONDS)) }
+            assertEquals("The river", withTimeout(5000) { firstPreview.await() })
             job.cancelAndJoin(); assertEquals(1, s.requestCount)
         }
     }
