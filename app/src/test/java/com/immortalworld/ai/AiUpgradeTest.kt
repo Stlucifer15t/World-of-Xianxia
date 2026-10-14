@@ -156,4 +156,16 @@ class AiUpgradeTest {
             assertTrue(result.references.isEmpty()); assertTrue(result.warnings.isNotEmpty()); assertEquals(1, s.requestCount)
         }
     }
+    @Test fun mediaWikiLookupUsesTheConfiguredInstallationNotAnInventedArticlePath() = runBlocking {
+        MockWebServer().use { s ->
+            s.start()
+            s.enqueue(MockResponse().setHeader("Content-Type", "application/json").setBody("""{"query":{"search":[{"title":"Qi cultivation"}]}}"""))
+            s.enqueue(MockResponse().setHeader("Content-Type", "text/html").setBody("<p>Cultivation stories describe qi refinement and spiritual practice in fictional worlds.</p>"))
+            val result = KnowledgeService(OkHttpClient(), true).lookup(config(s).copy(knowledgeEnabled = true, sources = listOf(s.url("/custom/api.php").toString())), "cultivation")
+            assertEquals(1, result.references.size)
+            assertTrue(s.takeRequest().path!!.startsWith("/custom/api.php?"))
+            assertTrue(s.takeRequest().path!!.startsWith("/custom/index.php?title=Qi"))
+        }
+    }
+
 }

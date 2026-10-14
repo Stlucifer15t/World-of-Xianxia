@@ -28,11 +28,11 @@ object PublicWeb {
         }
         return u
     }
-    val client: OkHttpClient = OkHttpClient.Builder().dns { host ->
-        Dns.SYSTEM.lookup(host).also { addresses ->
+    val client: OkHttpClient = OkHttpClient.Builder().dns(object : Dns {
+        override fun lookup(hostname: String): List<InetAddress> = Dns.SYSTEM.lookup(hostname).also { addresses ->
             if (addresses.isEmpty() || addresses.any { !publicAddress(it) }) throw UnknownHostException("Non-public knowledge address blocked")
         }
-    }.connectTimeout(3, TimeUnit.SECONDS).readTimeout(4, TimeUnit.SECONDS).callTimeout(5, TimeUnit.SECONDS)
+    }).connectTimeout(3, TimeUnit.SECONDS).readTimeout(4, TimeUnit.SECONDS).callTimeout(5, TimeUnit.SECONDS)
         .followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false).build()
 }
 
@@ -64,10 +64,10 @@ class KnowledgeService(private val client: OkHttpClient = PublicWeb.client, priv
             supervisorScope {
                 val terms = query.lowercase().split(Regex("\\W+")).filter { it.length > 2 }
                 val chosen = config.sources.sortedByDescending { url -> terms.count { url.contains(it, true) } }.take(2)
-                val jobs = chosen.map { url -> async { safely { source(url, query) } } }.toMutableList()
-                if (config.searchEndpoint.isNotBlank()) jobs += async { safely { search(config.searchEndpoint, query) } }
+                val jobs = chosen.map { url -> async { timed { source(url, query) } } }.toMutableList()
+                if (config.searchEndpoint.isNotBlank()) jobs += async { timed { search(config.searchEndpoint, query) } }
                 val all = jobs.awaitAll()
-                KnowledgeResult(all.flatMap { it.references }.distinctBy { it.url }.take(3), all.flatMap { it.warnings })
+                KnowledgeResult(all.flatMap { it.references }.distinctBy { it.url }.take(3), all.flatMap { it.warnings }.distinct())
             }
         } ?: KnowledgeResult(warnings = listOf("Knowledge lookup timed out. Narration continues with saved facts only."))
         synchronized(cache) {
@@ -76,6 +76,8 @@ class KnowledgeService(private val client: OkHttpClient = PublicWeb.client, priv
         }
         return result
     }
+    private suspend fun timed(block: suspend () -> KnowledgeReference?): KnowledgeResult = withTimeoutOrNull(4500) { safely(block) }
+        ?: KnowledgeResult(warnings = listOf("A source timed out; other available references are retained."))
     private suspend fun safely(block: suspend () -> KnowledgeReference?): KnowledgeResult = try {
         KnowledgeResult(listOfNotNull(block()))
     } catch (e: CancellationException) { throw e }
@@ -110,7 +112,8 @@ class KnowledgeService(private val client: OkHttpClient = PublicWeb.client, priv
                     .addQueryParameter("srsearch", query).addQueryParameter("srlimit", "1").build()
                 val root = CompatibleStoryteller.boundedObject(get(api.toString()).second)
                 val title = root.getJSONObject("query").getJSONArray("search").optJSONObject(0)?.optString("title") ?: return null
-                val pageUrl = u.newBuilder().query(null).encodedPath("/wiki/").addPathSegment(title.replace(' ', '_')).build()
+                val pageUrl = if (fandom) u.newBuilder().query(null).encodedPath("/wiki/").addPathSegment(title.replace(' ', '_')).build()
+                    else u.newBuilder().query(null).encodedPath(u.encodedPath.removeSuffix("api.php") + "index.php").addQueryParameter("title", title).build()
                 return page(pageUrl.toString(), query)
             } catch (e: CancellationException) { throw e }
               catch (e: Exception) { if (!fandom || !u.encodedPath.startsWith("/wiki/")) throw e }
