@@ -57,6 +57,7 @@ class KnowledgeService(private val client: OkHttpClient = PublicWeb.client, priv
     suspend fun lookup(config: AiConfig, query: String): KnowledgeResult = withContext(Dispatchers.IO) { lookupInBackground(config, query) }
     private suspend fun lookupInBackground(config: AiConfig, query: String): KnowledgeResult {
         if (!config.knowledgeEnabled || query.isBlank()) return KnowledgeResult()
+        if (config.sources.isEmpty() && config.searchEndpoint.isBlank()) return KnowledgeResult(warnings = listOf("Add a public source URL or a compatible search endpoint first."))
         require(query.length <= 200) { "Keep knowledge queries within 200 characters." }
         val key = (config.sources + config.searchEndpoint + query).joinToString("\n")
         synchronized(cache) { cache[key] }?.takeIf { System.currentTimeMillis() - it.time < 30 * 60_000L }?.let { return it.result }

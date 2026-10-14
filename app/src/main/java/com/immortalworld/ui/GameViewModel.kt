@@ -248,6 +248,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         finally { mutable.update { it.copy(knowledgeWorking = false) } }
     }
     fun submitAction() = task {
+        require(mutable.value.aiReady) { "Saved provider settings are still loading. Please wait a moment; no action has run." }
         val active = mutable.value.active ?: error("No campaign is open.")
         val input = mutable.value.actionDraft.trim()
         require(input.isNotBlank()) { "Describe an action first." }

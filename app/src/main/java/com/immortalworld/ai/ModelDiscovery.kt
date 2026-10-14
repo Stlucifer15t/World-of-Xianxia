@@ -6,7 +6,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 /** Uses explicit server metadata only—never guesses context capacity from a model's name. */
 class ModelDiscovery(private val client: OkHttpClient = AiTransport.metadataClient, private val allowHttpForTests: Boolean = false) {
     suspend fun fetch(config: AiConfig): ModelCatalog {
-        CompatibleStoryteller.validate(config.copy(temperature = .6, contextTokens = 32768, maxOutputTokens = 1200, sources = emptyList(), searchEndpoint = ""), allowHttpForTests, requireModel = false)
+        CompatibleStoryteller.validate(config.copy(temperature = .6, contextTokens = 32768, maxOutputTokens = 1200, knowledgeEnabled = false, sources = emptyList(), searchEndpoint = ""), allowHttpForTests, requireModel = false)
         val endpoint = config.endpoint.toHttpUrl()
         require(endpoint.encodedPath.trimEnd('/').endsWith("/chat/completions")) { "Automatic listing needs a compatible /chat/completions endpoint. Enter a model and context limit manually." }
         val path = endpoint.encodedPath.trimEnd('/').removeSuffix("/chat/completions") + "/models"

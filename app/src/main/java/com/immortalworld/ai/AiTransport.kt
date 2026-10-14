@@ -26,7 +26,7 @@ object AiTransport {
         continuation.invokeOnCancellation { call.cancel() }
         call.enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                if (continuation.isActive) continuation.resumeWithException(AiFailure("Connection failed or timed out. Saved settings and offline gameplay remain available."))
+                if (continuation.isActive) continuation.resumeWithException(AiFailure("Connection failed or timed out. Saved settings and offline gameplay remain available.", e))
             }
             override fun onResponse(call: Call, response: Response) {
                 val result = runCatching { response.use { parse(it) } }.recoverCatching {

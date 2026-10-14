@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class AiFailure(message: String) : IOException(message)
+class AiFailure(message: String, cause: Throwable? = null) : IOException(message, cause)
 
 /** OpenAI-compatible chat/completions adapter. No save/database reference is provided. */
 class CompatibleStoryteller(private val config: AiConfig,
@@ -30,6 +30,7 @@ class CompatibleStoryteller(private val config: AiConfig,
             require(config.contextTokens in 1024..10_000_000) { "Context window must be 1,024–10,000,000 tokens." }
             require(config.maxOutputTokens in 1..16000 && config.maxOutputTokens < config.contextTokens) { "Maximum output must be 1–16,000 tokens and smaller than the context window. Story length remains bounded." }
             require(config.sources.size <= 8) { "Use at most eight knowledge sources." }
+            require(!config.knowledgeEnabled || config.sources.isNotEmpty() || config.searchEndpoint.isNotBlank()) { "Add a public knowledge source or search endpoint, or disable reference lookups." }
             config.sources.forEach { PublicWeb.url(it, allowHttp) }
             if (config.searchEndpoint.isNotBlank()) PublicWeb.url(config.searchEndpoint, allowHttp, allowQuery = false)
             require(config.apiKey.length <= 1000 && '\n' !in config.apiKey && '\r' !in config.apiKey)

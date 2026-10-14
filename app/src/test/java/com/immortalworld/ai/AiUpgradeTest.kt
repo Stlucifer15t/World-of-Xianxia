@@ -58,8 +58,12 @@ class AiUpgradeTest {
     @Test fun cancellationStopsStreamingWithoutReplay() = runBlocking {
         MockWebServer().use { s ->
             s.start(); s.enqueue(MockResponse().setHeader("Content-Type", "text/event-stream").setBody(chunk("The river") + chunk(stop = true) + "data: [DONE]\n\n").throttleBody(10, 1, TimeUnit.SECONDS))
-            val job = launch { CompatibleStoryteller(config(s), allowHttpForTests = true).narrateStreaming(context) {} }
-            withContext(Dispatchers.IO) { assertNotNull(s.takeRequest(2, TimeUnit.SECONDS)) }
+            // Isolate this fault-injection server from the shared pool tested separately above.
+            // Enqueue before awaiting the request: first-use client initialization must not race the assertion.
+            val client = OkHttpClient.Builder().followRedirects(false).retryOnConnectionFailure(false).build()
+            val narrator = CompatibleStoryteller(config(s), client, allowHttpForTests = true)
+            val job = launch(start = CoroutineStart.UNDISPATCHED) { narrator.narrateStreaming(context) {} }
+            withContext(Dispatchers.IO) { assertNotNull(s.takeRequest(5, TimeUnit.SECONDS)) }
             job.cancelAndJoin(); assertEquals(1, s.requestCount)
         }
     }
