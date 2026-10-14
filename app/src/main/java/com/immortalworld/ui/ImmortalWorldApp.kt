@@ -122,7 +122,7 @@ fun ImmortalWorldApp(model: GameViewModel) {
                     }
                 }
                 if (state.busy) {
-                    Box(Modifier.matchParentSize().background(Ink.copy(alpha = .78f))
+                    Box(Modifier.matchParentSize().testTag("operation_in_progress").background(Ink.copy(alpha = .78f))
                         .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}, contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
                             CircularProgressIndicator(); Text("Safeguarding your journey…")

@@ -9,3 +9,6 @@ local.properties
 *.keystore
 captures/
 .externalNativeBuild/
+
+__pycache__/
+*.pyc
