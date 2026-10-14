@@ -137,6 +137,19 @@ object AdventureChecks {
             check(fast.adventure!!.simulationHour == 72L && fast.adventure!!.factions.first().resources == 115)
             check(fast.adventure!!.quests.all { it.status == "AVAILABLE" } && fast.world.currentLocation == s.world.currentLocation)
         },
+        "scheduled patrol never moves an active opponent out of their duel" to {
+            val base = sample()
+            val s = base.copy(world = base.world.copy(currentLocation = "Silent Pine Mountain"), rules = base.rules.copy(godMode = true),
+                adventure = base.adventure!!.copy(locationId = "mountain", hour = 23, simulationHour = 23))
+            val result = act(act(s, ActionKind.CHALLENGE, "ren"), ActionKind.DEFEND)
+            check(result.adventure!!.combat != null)
+            check(result.adventure!!.npcs.first { it.character.id == "ren" }.locationId == "mountain")
+            check(result.adventure!!.events.any { "remains in the active duel" in it.text })
+        },
+        "NPCs retain the resolved ending of a duel" to {
+            val s = act(act(sample(), ActionKind.CHALLENGE, "mei"), ActionKind.NEGOTIATE)
+            check(s.adventure!!.npcs.first { it.character.id == "mei" }.memories.last().contains("agrees to end the duel"))
+        },
         "offline claims are opt-in bounded and cannot replay an interval" to {
             var now = 1000L; val e = AdventureEngine { now }; val s = sample()
             rejects { e.apply(s, GameAction(ActionKind.CLAIM_OFFLINE)) }

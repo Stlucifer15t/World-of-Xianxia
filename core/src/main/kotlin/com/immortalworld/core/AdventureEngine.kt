@@ -164,6 +164,11 @@ class AdventureEngine(private val clock: () -> Long = System::currentTimeMillis)
                     fact("Defeated. You are left wounded (35% attack penalty) at your current location. Rest or meditate when you choose; no dialogue or travel was chosen for you.")
                 } else combat = combat.copy(enemy = enemy, turn = combat.turn + 1)
             }
+            if (combat == null && fighting.npcId != null) {
+                a.npcs.firstOrNull { it.character.id == fighting.npcId }?.let { n ->
+                    updateNpc(remember(n, "Day ${s.world.day}, duel with ${p.name}: ${facts.takeLast(2).joinToString(" ")}"))
+                }
+            }
             a = a.copy(combat = combat); elapsed = 1
         } else when (action.kind) {
             ActionKind.OBSERVE -> {
@@ -335,12 +340,13 @@ class AdventureEngine(private val clock: () -> Long = System::currentTimeMillis)
         val previousSimDay = a.simulationHour / 24; val nextSimHour = a.simulationHour + simElapsed
         for (day in previousSimDay + 1..nextSimHour / 24) {
             a = a.copy(factions = a.factions.map { it.copy(resources = (it.resources + 5).coerceAtMost(1_000_000)) },
-                npcs = a.npcs.map { n -> when (n.role) {
+                npcs = a.npcs.map { n -> if (n.character.id == a.combat?.npcId) n else when (n.role) {
                     "scout" -> n.copy(locationId = if (day % 2L == 0L) "mountain" else "crossing")
                     "merchant" -> if (day % 3L == 0L) n.copy(character = n.character.copy(inventory = n.character.inventory.map { it.copy(quantity = (it.quantity + 2).coerceAtMost(it.maxStack)) })) else n
                     else -> n
                 } })
-            developments += "Scheduled day $day: the Azure Cloud Sect receives 5 resources; Ren patrols ${if (day % 2L == 0L) "Silent Pine Mountain" else "Jade River Crossing"}.${if (day % 3L == 0L) " Mei replenishes existing stock by two." else ""}"
+            val patrol = if (a.combat?.npcId == "ren") "Ren remains in the active duel" else "Ren patrols ${if (day % 2L == 0L) "Silent Pine Mountain" else "Jade River Crossing"}"
+            developments += "Scheduled day $day: the Azure Cloud Sect receives 5 resources; $patrol.${if (day % 3L == 0L && a.combat?.npcId != "mei") " Mei replenishes existing stock by two." else ""}"
         }
         val ageDelta = ((s.world.day - 1) / 365 - (state.world.day - 1) / 365).toInt()
         if (s.rules.lifespanEnabled && ageDelta > 0) p = p.copy(age = (p.age + ageDelta).coerceAtMost(1_000_000_000))
