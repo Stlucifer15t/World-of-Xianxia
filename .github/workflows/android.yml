@@ -23,6 +23,9 @@ jobs:
         run: ./scripts/ci-run.sh "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-35' 'build-tools;35.0.0'
       - name: Unit tests, lint, and debug APK
         run: ./scripts/ci-run.sh ./gradlew :core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug --stacktrace --console=plain
+      - name: Publish test and schema diagnostics
+        if: always()
+        run: python3 scripts/ci-report.py --schema
       - uses: actions/upload-artifact@v5
         if: always()
         with:
@@ -62,6 +65,9 @@ jobs:
           arch: x86_64
           disable-animations: true
           script: ./scripts/ci-run.sh ./gradlew :app:connectedDebugAndroidTest --stacktrace --console=plain
+      - name: Publish device test diagnostics
+        if: always()
+        run: python3 scripts/ci-report.py
       - uses: actions/upload-artifact@v5
         if: always()
         with:

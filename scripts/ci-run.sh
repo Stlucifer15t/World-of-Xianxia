@@ -11,10 +11,14 @@ if [ "$status" -ne 0 ]; then
 from pathlib import Path
 import sys
 text = Path(sys.argv[1]).read_text(errors="replace")
-if len(text) > 28000:
-    text = text[:12000] + "\n… middle of log omitted; see full workflow log …\n" + text[-16000:]
-text = text.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
-print(f"::error title=Command failed (exit {sys.argv[2]})::{text}")
+# Individual Checks API annotation messages are truncated at 4096 characters.
+# Keep a short beginning plus the diagnostic tail and use bounded chunks.
+if len(text) > 27000:
+    text = text[:3000] + "\n… middle omitted; see full workflow log …\n" + text[-23500:]
+chunks = [text[i:i + 3000] for i in range(0, len(text), 3000)]
+for index, chunk in enumerate(chunks, 1):
+    chunk = chunk.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+    print(f"::error title=Command failed (exit {sys.argv[2]}) part {index}/{len(chunks)}::{chunk}")
 PY
 fi
 exit "$status"
