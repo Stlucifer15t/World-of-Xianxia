@@ -1,28 +1,57 @@
 # Phase 1 verification and device acceptance
 
-## Recorded in this workspace
+## Verified on GitHub Actions — 2026-10-14
 
-On 2026-10-14, Kotlin 2.1.20 and Java 17 compiled the core; all **34** cases in
-`CoreChecks` passed. A toolchain was bootstrapped from the permitted npm/PyPI
-registries into ignored `.cache/`; no toolchain binary is committed.
-
-`./gradlew --version` was attempted with Java 17. Gradle's distribution download
-failed with `SSLHandshakeException`; the sandbox only permits a limited set of
-hosts. Google's Android SDK download host is also inaccessible. Consequently:
+[Run 38632996109](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38632996109)
+completed successfully for code commit `89266cb399c0ccb88fcd776771b3ce05d405794d`.
+All three jobs (`build`, `persistence-tests (26)`, `persistence-tests (35)`) passed.
+Counts below come from the JUnit XML reports published through GitHub checks.
 
 | Check | Status |
 |---|---|
-| Core compilation | Passed |
-| Core checks (generation, RNG, rarity, validation) | 34 passed |
-| Save codec Kotlin typecheck against upstream JSON-java 20240303 source | Passed (not a runtime or Android build test) |
-| Android Gradle compilation / APK | Not run; blocked |
-| JSON codec unit tests | Authored, not yet run |
-| Room persistence instrumentation | Authored, not yet run |
-| Compose creation/journal/status flow | Authored, not yet run |
-| Lint / real-device UI / SAF | Not run |
-| CI workflow | Configured, not executed from this workspace |
+| Android compilation and debug APK | Passed; artifact uploaded |
+| Core + portable-save unit tests | 52 passed; 0 failed/errored/skipped |
+| API 26 Room + Compose instrumentation | 15 passed; 0 failed/errored/skipped |
+| API 35 Room + Compose instrumentation | 15 passed; 0 failed/errored/skipped |
+| Android lint | 0 errors; 14 non-error findings |
+| Generated Room v1 schema | Retrieved, integrity-checked, reviewed, committed |
+| Physical-device UI / actual file picker / accessibility / rotation | Not yet verified |
 
-Do not substitute static review or core success for a working Android APK.
+The 52 unit tests comprise 34 parameterized core checks and 18 save codec tests.
+Each emulator ran 14 database tests and one end-to-end Compose creation, autosaved
+journal, and character-inspection test. Tests reopen a disk database, not just an
+in-memory database. This does not substitute for the manual force-stop/picker checks.
+
+[Download the tested debug APK artifact](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38632996109/artifacts/11927596311)
+(the ZIP contains `app-debug.apk`; this is not a production release).
+Machine-readable provenance is in `verification-2026-10-14.json`.
+
+### Failures found and addressed
+
+1. Run `38629739276`: the extra Android setup action failed before compilation.
+   CI now uses the SDK installed on the pinned Ubuntu 24.04 GitHub runner.
+2. Runs `38630033310` / `38631531419`: the build, unit tests, and API 26 tests passed.
+   API 35's UI test failed at the first creator lookup. The next test step ran
+   without ensuring the home button was visible and navigation had completed.
+3. The UI test now explicitly scrolls the new-life button into view, waits for the
+   creator/journey/status destinations, and waits for async operations to finish.
+   No tests, assertions, or API levels were removed. Run `38632996109` passed all jobs.
+
+### Local versus remote execution
+
+The local sandbox compiled the Kotlin core and passed its 34 checks, and typechecked
+`SaveCodec` against upstream JSON-java source. It cannot download Gradle/Google's SDK,
+or access the separate cloud domains hosting workflow logs/artifacts. These limits
+are **not a reason to stop Android verification**: GitHub-hosted runners now do it.
+
+`scripts/ci-run.sh` preserves failing exit codes and emits bounded diagnostics in
+4096-character-safe annotation chunks. `scripts/ci-report.py` publishes JUnit counts,
+failed-test details, lint counts, and initial generated schemas through the Checks
+API. Full reports and APKs remain downloadable from GitHub's workflow UI. Branch
+build caches are enabled; pull-request runs use read-only caches.
+
+Do not equate automated emulator success with full physical-device acceptance or a
+complete RPG. The remaining manual checks are below.
 
 ## Automated suites
 

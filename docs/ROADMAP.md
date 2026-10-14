@@ -3,7 +3,7 @@
 The full Immortal World specification is the direction, not a statement of current
 completion. Do not ship buttons for systems whose mechanics do not exist.
 
-## Phase 1 — foundation (source implemented; acceptance blocked)
+## Phase 1 — foundation (automated verification passed; manual acceptance open)
 
 Native application shell; character creation and generation; complete initial
 character records; status; independent persistent slots; manual/autosaving;
@@ -12,14 +12,17 @@ validated portable JSON; backups; real journal edits to exercise persistence.
 Before considering this phase complete:
 
 - [x] Platform-free core compiles and local checks pass.
-- [ ] Gradle Android debug build and lint pass.
-- [ ] JSON round-trip and invalid-file unit tests pass.
-- [ ] Room persistence tests pass on API 26 and 35.
-- [ ] Compose creation/journal/inspection smoke test passes.
+- [x] Gradle Android debug build and lint pass (zero errors; 14 non-error findings).
+- [x] JSON round-trip and invalid-file unit tests pass (18 codec tests).
+- [x] Room persistence tests pass on API 26 and 35 (14 per API).
+- [x] Compose creation/journal/inspection smoke test passes on both APIs.
 - [ ] File-picker round-trip, force-stop/relaunch, accessibility, small-screen,
       large-font, and rotation acceptance checks pass on Android.
-- [ ] Generate/review/commit Room schema export from a successful Android build.
-- [ ] Produce a working debug APK and record device/API test evidence.
+- [x] Generate/review/commit Room schema export from a successful Android build.
+- [x] Produce a debug APK and record automated device/API test evidence.
+
+Evidence: [run 38632996109](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38632996109),
+code commit `89266cb399c0ccb88fcd776771b3ce05d405794d`.
 
 ## Phase 2 — authoritative gameplay
 

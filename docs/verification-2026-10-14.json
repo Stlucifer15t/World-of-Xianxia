@@ -1,0 +1,53 @@
+{
+  "verified_on": "2026-10-14",
+  "repository": "Stlucifer15t/World-of-Xianxia",
+  "branch": "arena/b0b240be-world-of-xianxia",
+  "code_commit": "89266cb399c0ccb88fcd776771b3ce05d405794d",
+  "run_id": 38632996109,
+  "run_url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38632996109",
+  "conclusion": "success",
+  "unit_tests": {
+    "core": 34,
+    "save_codec": 18,
+    "total": 52,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "emulator_tests": [
+    {
+      "api": 26,
+      "room": 14,
+      "compose": 1,
+      "total": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "api": 35,
+      "room": 14,
+      "compose": 1,
+      "total": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "lint": {
+    "errors": 0,
+    "other_findings": 14
+  },
+  "apk_artifact": {
+    "id": 11927596311,
+    "name": "immortal-world-phase1-debug-apk",
+    "url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38632996109/artifacts/11927596311",
+    "archive_sha256": "922bcd5aeceb60b84e8349622232058b6accdb0cf7cb07ef0fe411a306676fe1"
+  },
+  "schema_sha256": "8a2fa3d84ff99a951ce4ddffebe55999562ab93dcf2312a6db3483999da45d2c",
+  "remaining_manual_acceptance": [
+    "Physical-device install and force-stop/relaunch",
+    "Actual SAF file-picker import/export",
+    "Accessibility, large fonts, narrow-screen and rotation checks"
+  ]
+}

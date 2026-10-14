@@ -3,9 +3,16 @@
 A native, offline-first Android xianxia RPG foundation. Kotlin + Jetpack Compose,
 with a provider-independent game core, Room persistence, and portable JSON saves.
 
-**Status: Phase 1 implemented in source, not yet Android-build/device verified.**
-This is not the complete RPG. No APK has been produced in this workspace. Do not
-advance to Phase 2 until the Android build and device acceptance gates pass.
+**Status: Phase 1 builds successfully and passes automated Android verification.**
+This is not the complete RPG. A debug APK is available from GitHub Actions;
+physical-device, file-picker, and accessibility acceptance checks remain open.
+
+[Successful build and tests](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38632996109)
+· [Download the tested APK artifact (ZIP)](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38632996109/artifacts/11927596311)
+
+Extract `app-debug.apk` from the ZIP and install it on an Android 8.0+ device.
+GitHub may require sign-in to download artifacts. Artifacts expire; future builds
+produce new downloads. This is a debug/test build, not a signed production release.
 
 ## Implemented in this increment
 
@@ -62,10 +69,13 @@ With a device/emulator connected:
 
 The checked-in [GitHub Actions workflow](.github/workflows/android.yml) builds the
 APK, runs unit tests/lint, and runs instrumentation tests on APIs 26 and 35.
-When the branch is pushed and the workflow succeeds, download
-`immortal-world-phase1-debug-apk` from the workflow's artifacts. This is **not** a
-claim that CI has already run. A debug artifact alone does not prove the device
-test job passed; verify both jobs.
+The workflow has passed for commit `89266cb399c0ccb88fcd776771b3ce05d405794d`.
+For newer builds, download `immortal-world-phase1-debug-apk` from their workflow
+artifacts and verify both emulator jobs, not just the APK build job.
+
+CI debug signing keys may differ between runners/builds. Export your campaigns
+before replacing a debug installation; if Android rejects an update's signature,
+do not uninstall until your saves are exported. Stable release signing is Phase 6.
 
 ## Try the foundation
 
@@ -83,13 +93,25 @@ saves and local backups; export to a document provider to preserve them.
 
 ## Verification recorded here
 
-- **Passed:** compilation of the pure Kotlin core using Kotlin 2.1.20 / Java 17.
-- **Passed:** 34 core checks, including 10,000-character rarity sampling, RNG
-  restoration, custom characters, and invalid-state rejection.
-- **Blocked:** Gradle/Android compilation, JSON unit tests, Room/device tests,
-  Compose UI tests, lint, APK generation. This sandbox cannot download Gradle
-  or Google's Android SDK; the attempted wrapper bootstrap failed with an SSL
-  connection error. No Android test success is implied.
+GitHub Actions run [38632996109](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38632996109)
+on **2026-10-14** passed:
+
+- **52 unit tests:** 34 core checks and 18 portable-save codec tests.
+- **15 instrumentation tests on API 26**, and the same **15 on API 35**:
+  14 Room/persistence tests and one Compose creation/journal/status flow per device.
+- **Android compilation and debug APK generation.**
+- **Android lint:** zero errors; 14 non-error findings remain.
+- Real KSP-generated Room schema v1 was retrieved, reviewed, and checked in.
+
+An earlier API 35 UI test failed because it attempted to use the creator before
+confirming navigation. The test now scrolls the home button into view and waits
+for screen transitions and async operations; assertions were not removed.
+
+The local sandbox still cannot download Gradle/Google SDKs or direct workflow
+log/artifact storage. **That is no longer a build blocker:** GitHub-hosted runners
+perform the builds, and bounded diagnostics are available through the Checks API.
+Physical-device/file-picker/accessibility checks are still pending; see
+[testing evidence and remaining acceptance checks](docs/TESTING.md).
 
 Core checks can also run without Android or Gradle, with Java 17 and Kotlin 2.1.20
 on PATH:

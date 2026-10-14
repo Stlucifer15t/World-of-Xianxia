@@ -4,7 +4,9 @@
 
 This repository originally contained only a README. Phase 1 creates a native
 Android foundation rather than replacing an existing engine or implementing a
-web prototype. The Android build gate is still open; later phases must wait.
+web prototype. Android compilation, unit tests, and emulator tests on APIs 26/35
+have now passed on GitHub Actions. Manual file-picker/device acceptance is still
+open; see `TESTING.md` for the exact scope and evidence.
 
 ### `:core` — platform-free state
 
@@ -70,9 +72,10 @@ queries over inventories/NPCs, introduce child tables and explicit Room migratio
 keeping the portable `GameSave` contract independent of SQL layout. Never use
 `fallbackToDestructiveMigration` for user saves.
 
-KSP generates Room schema v1 during the first Android build. Review and commit
-`app/schemas` after that build succeeds, then add migration tests before changing
-schema versions. No invented/generated-by-hand Room schema is supplied here.
+`app/schemas/com.immortalworld.data.GameDatabase/1.json` is the actual KSP-generated
+schema from a successful GitHub Android build, retrieved through Checks API
+annotations with a SHA-256 integrity check, reviewed, and committed. Add explicit
+migration tests before changing schema versions; do not hand-invent schema exports.
 
 All overwrites validate before writing, check the expected revision, insert a
 backup, update metadata/state, and prune backups within one transaction. Stale
