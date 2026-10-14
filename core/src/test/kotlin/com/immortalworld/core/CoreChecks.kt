@@ -49,7 +49,7 @@ object CoreChecks {
         },
         "creation age bounds" to { rejected { CharacterGenerator.generate(CreationOptions(age = 0), 1, "p") } },
         "creation name bounds" to { rejected { CharacterGenerator.generate(CreationOptions(name = " "), 1, "p") } },
-        "future versions refused" to { rejected { SaveValidator.validate(sample().copy(version = 2)) } },
+        "future versions refused" to { rejected { SaveValidator.validate(sample().copy(version = 999)) } },
         "wrong format refused" to { rejected { SaveValidator.validate(sample().copy(format = "other")) } },
         "negative timestamp refused" to { rejected { SaveValidator.validate(sample().copy(createdAt = -1)) } },
         "time reversal refused" to { rejected { SaveValidator.validate(sample().copy(updatedAt = 0)) } },

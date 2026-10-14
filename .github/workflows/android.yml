@@ -1,4 +1,4 @@
-name: Android Phase 1 verification
+name: Android verification
 on:
   push:
   pull_request:
@@ -38,7 +38,7 @@ jobs:
             app/schemas/
       - uses: actions/upload-artifact@v5
         with:
-          name: immortal-world-phase1-debug-apk
+          name: immortal-world-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
   persistence-tests:

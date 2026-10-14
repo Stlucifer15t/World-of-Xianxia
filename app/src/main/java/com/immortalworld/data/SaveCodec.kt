@@ -12,6 +12,7 @@ object SaveCodec {
         return obj(
             "format" to s.format, "version" to s.version, "id" to s.id, "name" to s.name,
             "createdAt" to s.createdAt, "updatedAt" to s.updatedAt, "randomState" to s.randomState,
+            "adventure" to s.adventure?.let(::encodeAdventure),
             "player" to encodePlayer(s.player), "world" to obj(
                 "id" to s.world.id, "name" to s.world.name, "day" to s.world.day,
                 "currentLocation" to s.world.currentLocation, "startingCircumstances" to s.world.startingCircumstances,
@@ -33,19 +34,22 @@ object SaveCodec {
         try {
             val tokener = JSONTokener(text)
             val root = tokener.nextValue() as? JSONObject ?: error("Save must be a JSON object.")
-            root.only("format", "version", "id", "name", "createdAt", "updatedAt", "randomState", "player", "world", "rules", "realms")
+            root.only("format", "version", "id", "name", "createdAt", "updatedAt", "randomState", "player", "world", "rules", "realms", "adventure")
             require(tokener.nextClean() == '\u0000') { "Unexpected content after save." }
             require(root.string("format") == "xianxia-save") { "This is not an Immortal World save." }
             val version = root.int("version")
-            require(version == 1) { "Unsupported save version $version. No data was changed." }
-            // v1 is the first format. Future migrations must occur here, before validation or writes.
+            require(version in 1..2) { "Unsupported save version $version. No data was changed." }
+            // v1 -> v2 preserves all old fields. World initialization is an explicit backed-up
+            // repository update on activation, not a destructive Room migration.
+            require(version != 1 || !root.has("adventure")) { "Version 1 cannot contain adventure data." }
             val w = root.getJSONObject("world")
             val r = root.getJSONObject("rules")
             w.only("id", "name", "day", "currentLocation", "startingCircumstances", "journal")
             r.only("difficulty", "cultivationSpeed", "breakthroughDifficulty", "lifespanEnabled", "skipTribulations", "passiveCultivation", "godMode")
             return SaveValidator.validate(GameSave(
-                format = root.string("format"), version = version, id = root.string("id"), name = root.string("name"),
+                format = root.string("format"), version = 2, id = root.string("id"), name = root.string("name"),
                 createdAt = root.long("createdAt"), updatedAt = root.long("updatedAt"), randomState = root.long("randomState"),
+                adventure = if (version == 1 || root.get("adventure") == JSONObject.NULL) null else decodeAdventure(root.getJSONObject("adventure")),
                 player = decodePlayer(root.getJSONObject("player")),
                 world = WorldState(w.string("id"), w.string("name"), w.long("day"), w.string("currentLocation"),
                     w.string("startingCircumstances"), w.objects("journal", 200).onEach { it.only("id", "day", "text") }.map { JournalEntry(it.string("id"), it.long("day"), it.string("text")) }),
@@ -104,6 +108,39 @@ object SaveCodec {
             inventory = p.objects("inventory", 500).onEach { it.only("id", "name", "description", "kind", "rank", "quantity", "maxStack", "power", "equippedSlot") }.map { Item(it.string("id"), it.string("name"), it.string("description"), it.string("kind"),
                 it.string("rank"), it.int("quantity"), it.int("maxStack"), it.int("power"), it.nullableString("equippedSlot")) },
             health = p.int("health"), maxHealth = p.int("maxHealth"), energy = p.int("energy"), maxEnergy = p.int("maxEnergy"), spiritStones = p.int("spiritStones"),
+        )
+    }
+    private fun encodeAdventure(a: AdventureState): JSONObject = obj(
+        "locationId" to a.locationId, "hour" to a.hour, "simulationHour" to a.simulationHour, "simulationMode" to a.simulationMode,
+        "injury" to a.injury, "sequence" to a.sequence,
+        "locations" to array(a.locations.map { obj("id" to it.id, "name" to it.name, "description" to it.description, "danger" to it.danger, "discovered" to it.discovered) }),
+        "npcs" to array(a.npcs.map { obj("character" to encodePlayer(it.character), "locationId" to it.locationId, "role" to it.role, "goal" to it.goal,
+            "knowledge" to array(it.knowledge), "relationship" to it.relationship, "memories" to array(it.memories), "negotiated" to it.negotiated) }),
+        "factions" to array(a.factions.map { obj("id" to it.id, "name" to it.name, "resources" to it.resources, "reputation" to it.reputation, "member" to it.member) }),
+        "quests" to array(a.quests.map { obj("id" to it.id, "name" to it.name, "giverId" to it.giverId, "objective" to it.objective, "status" to it.status, "reward" to it.reward) }),
+        "events" to array(a.events.map { obj("id" to it.id, "day" to it.day, "hour" to it.hour, "text" to it.text) }),
+        "history" to array(a.history.map { obj("id" to it.id, "input" to it.input, "day" to it.day, "hour" to it.hour, "facts" to array(it.facts), "calculations" to array(it.calculations), "narration" to it.narration, "accepted" to it.accepted) }),
+        "combat" to a.combat?.let { obj("enemy" to encodePlayer(it.enemy), "npcId" to it.npcId, "turn" to it.turn, "position" to it.position) },
+        "idlePlan" to a.idlePlan?.let { obj("activity" to it.activity, "method" to it.method, "useHerb" to it.useHerb, "checkpointMillis" to it.checkpointMillis) },
+        "searchCounts" to JSONObject().apply { a.searchCounts.forEach { (key, value) -> put(key, value) } }, "defeated" to array(a.defeated),
+    )
+    private fun decodeAdventure(a: JSONObject): AdventureState {
+        a.only("locationId", "hour", "simulationHour", "simulationMode", "injury", "sequence", "locations", "npcs", "factions", "quests", "events", "history", "combat", "idlePlan", "searchCounts", "defeated")
+        val counts = a.getJSONObject("searchCounts")
+        require(counts.length() <= 128) { "Too many search records." }
+        return AdventureState(locationId = a.string("locationId"), hour = a.int("hour"), simulationHour = a.long("simulationHour"), simulationMode = a.string("simulationMode"),
+            injury = a.int("injury"), sequence = a.long("sequence"),
+            locations = a.objects("locations", 128).map { it.only("id", "name", "description", "danger", "discovered"); Location(it.string("id"), it.string("name"), it.string("description"), it.int("danger"), it.bool("discovered")) },
+            npcs = a.objects("npcs", 100).map { it.only("character", "locationId", "role", "goal", "knowledge", "relationship", "memories", "negotiated");
+                Npc(decodePlayer(it.getJSONObject("character")), it.string("locationId"), it.string("role"), it.string("goal"), it.strings("knowledge"), it.int("relationship"), it.strings("memories"), it.bool("negotiated")) },
+            factions = a.objects("factions", 100).map { it.only("id", "name", "resources", "reputation", "member"); Faction(it.string("id"), it.string("name"), it.int("resources"), it.int("reputation"), it.bool("member")) },
+            quests = a.objects("quests", 100).map { it.only("id", "name", "giverId", "objective", "status", "reward"); Quest(it.string("id"), it.string("name"), it.string("giverId"), it.string("objective"), it.string("status"), it.int("reward")) },
+            events = a.objects("events", 200).map { it.only("id", "day", "hour", "text"); WorldEvent(it.string("id"), it.long("day"), it.int("hour"), it.string("text")) },
+            history = a.objects("history", 100).map { it.only("id", "input", "day", "hour", "facts", "calculations", "narration", "accepted");
+                ActionRecord(it.string("id"), it.string("input"), it.long("day"), it.int("hour"), it.strings("facts"), it.strings("calculations"), it.string("narration"), it.bool("accepted")) },
+            combat = if (a.get("combat") == JSONObject.NULL) null else a.getJSONObject("combat").let { it.only("enemy", "npcId", "turn", "position"); CombatState(decodePlayer(it.getJSONObject("enemy")), it.nullableString("npcId"), it.int("turn"), it.string("position")) },
+            idlePlan = if (a.get("idlePlan") == JSONObject.NULL) null else a.getJSONObject("idlePlan").let { it.only("activity", "method", "useHerb", "checkpointMillis"); IdlePlan(it.string("activity"), it.string("method"), it.bool("useHerb"), it.long("checkpointMillis")) },
+            searchCounts = counts.keys().asSequence().associateWith { counts.int(it) }, defeated = a.strings("defeated"),
         )
     }
     private fun JSONObject.only(vararg allowed: String) {

@@ -5,7 +5,7 @@ object SaveValidator {
     const val MAX_JOURNAL = 200
     fun validate(s: GameSave): GameSave {
         require(s.format == "xianxia-save") { "This is not an Immortal World save." }
-        require(s.version == 1) { "Unsupported save version ${s.version}. Update the application; the original file was not changed." }
+        require(s.version == 2) { "Unsupported save version ${s.version}. Update the application; the original file was not changed." }
         fun text(v: String, label: String, max: Int = 500) {
             require(v.isNotBlank() && v.length <= max && '\u0000' !in v) { "$label must contain 1–$max characters." }
         }
@@ -63,6 +63,7 @@ object SaveValidator {
         require(s.rules.difficulty in CreationCatalog.difficulties) { "Unknown difficulty." }
         require(s.rules.cultivationSpeed.isFinite() && s.rules.cultivationSpeed in 0.1..100.0) { "Invalid cultivation speed." }
         require(s.rules.breakthroughDifficulty.isFinite() && s.rules.breakthroughDifficulty in 0.1..10.0) { "Invalid breakthrough difficulty." }
+        AdventureValidator.validate(s)
         return s
     }
 }

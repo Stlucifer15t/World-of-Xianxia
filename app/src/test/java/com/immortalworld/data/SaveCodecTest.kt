@@ -61,4 +61,36 @@ class SaveCodecTest {
             val s = sample().copy(randomState = value); assertEquals(value, SaveCodec.decode(SaveCodec.encode(s)).randomState)
         }
     }
+    @Test fun versionOneMigratesWithoutReplacingExistingPlayerOrJournal() {
+        val original = sample()
+        val json = JSONObject(SaveCodec.encode(original)).put("version", 1).apply { remove("adventure") }.toString()
+        val migrated = SaveCodec.decode(json)
+        assertEquals(2, migrated.version)
+        assertEquals(original.player, migrated.player); assertEquals(original.world, migrated.world)
+        assertEquals(original.randomState, migrated.randomState); assertNull(migrated.adventure)
+        val initialized = AdventureFactory.ensure(migrated)
+        assertEquals(original.player, initialized.player)
+        assertEquals(initialized, SaveCodec.decode(SaveCodec.encode(initialized)))
+    }
+    @Test fun activeEncounterAndActionReceiptsRoundTripExactly() {
+        val engine = AdventureEngine()
+        var s = AdventureFactory.ensure(sample().copy(world = sample().world.copy(currentLocation = "Azure Cloud Village")))
+        s = engine.execute(s, GameAction(ActionKind.CHALLENGE, "wen"), "Challenge Wen", "challenge").state
+        s = engine.execute(s, GameAction(ActionKind.DEFEND), "Defend", "defend").state
+        assertNotNull(s.adventure!!.combat)
+        val restored = SaveCodec.decode(SaveCodec.encode(s))
+        assertEquals(s, restored)
+        assertEquals(engine.apply(s, GameAction(ActionKind.ATTACK)), engine.apply(restored, GameAction(ActionKind.ATTACK)))
+    }
+    @Test fun invalidAdventureReferencesAreRejected() {
+        val s = AdventureFactory.ensure(sample())
+        val root = JSONObject(SaveCodec.encode(s))
+        root.getJSONObject("adventure").put("locationId", "does-not-exist")
+        rejects(root.toString())
+    }
+    @Test fun versionTwoRequiresItsAdventureField() {
+        val json = JSONObject(SaveCodec.encode(sample())).apply { remove("adventure") }
+        rejects(json.toString())
+    }
+
 }

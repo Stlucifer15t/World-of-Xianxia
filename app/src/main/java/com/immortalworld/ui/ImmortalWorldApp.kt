@@ -56,25 +56,25 @@ fun ImmortalWorldApp(model: GameViewModel) {
     }
     MaterialTheme(colorScheme = Palette) {
         BackHandler(enabled = state.screen != Screen.HOME) {
-            model.navigate(if (state.screen == Screen.STATUS) Screen.JOURNEY else Screen.HOME)
+            model.navigate(if (state.active != null && state.screen !in listOf(Screen.CREATE, Screen.JOURNEY)) Screen.JOURNEY else Screen.HOME)
         }
         Scaffold(
             topBar = {
                 CenterAlignedTopAppBar(
                     title = { Text("IMMORTAL WORLD", fontSize = 15.sp, letterSpacing = 2.sp, color = Gold) },
                     navigationIcon = { if (state.screen != Screen.HOME) TextButton(onClick = {
-                        model.navigate(if (state.screen == Screen.STATUS) Screen.JOURNEY else Screen.HOME)
+                        model.navigate(if (state.active != null && state.screen !in listOf(Screen.CREATE, Screen.JOURNEY)) Screen.JOURNEY else Screen.HOME)
                     }, enabled = !state.busy) { Text("Back") } },
                     actions = { if (state.screen != Screen.SETTINGS) TextButton(onClick = { model.navigate(Screen.SETTINGS) }, enabled = !state.busy) { Text("Settings") } },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Ink),
                 )
             },
             bottomBar = {
-                if (state.active != null && state.screen in listOf(Screen.JOURNEY, Screen.STATUS, Screen.SAVES)) {
+                if (state.active != null && state.screen !in listOf(Screen.HOME, Screen.CREATE, Screen.SETTINGS)) {
                     NavigationBar(containerColor = Ink) {
                         listOf(Triple(Screen.JOURNEY, "Journey", "◇"), Triple(Screen.STATUS, "Character", "△"), Triple(Screen.SAVES, "Saves", "▤")).forEach { (screen, label, symbol) ->
-                            NavigationBarItem(selected = state.screen == screen, onClick = { model.navigate(screen) },
-                                enabled = !state.busy, icon = { Text(symbol, fontSize = 24.sp) }, label = { Text(label) })
+                            NavigationBarItem(modifier = Modifier.testTag("nav_${screen.name.lowercase()}"), selected = state.screen == screen, onClick = { model.navigate(screen) },
+                                enabled = !state.busy || state.aiWorking, icon = { Text(symbol, fontSize = 24.sp) }, label = { Text(label) })
                         }
                     }
                 }
@@ -84,7 +84,7 @@ fun ImmortalWorldApp(model: GameViewModel) {
                 Column(Modifier.fillMaxSize()) {
                     if (state.dirty) {
                         Surface(color = Color(0xFF4F3B1D), modifier = Modifier.fillMaxWidth()) {
-                            Text("Unsaved changes · Save in Journey before closing the app.", Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
+                            Text("Unsaved changes · Save in Journal before closing, or submit an adventure action to commit all pending changes.", Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     if (state.active?.save?.rules?.godMode == true) {
@@ -100,14 +100,27 @@ fun ImmortalWorldApp(model: GameViewModel) {
                             }
                         }
                     }
+                    if (state.aiWorking || state.aiNotice != null) {
+                        Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
+                            Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                                Text(if (state.aiWorking) "AI request in progress. You can inspect records or cancel." else state.aiNotice.orEmpty(), style = MaterialTheme.typography.bodySmall)
+                                if (state.aiWorking) TextButton(onClick = model::cancelAi) { Text("Cancel AI request") }
+                                else if (state.aiConfig.enabled && state.active?.save?.adventure?.history?.isNotEmpty() == true)
+                                    TextButton(onClick = model::retryNarration, enabled = !state.busy) { Text("Retry narration only") }
+                            }
+                        }
+                    }
                     Box(Modifier.weight(1f)) {
-                        val key = if (state.screen == Screen.JOURNEY || state.screen == Screen.STATUS)
+                        val key = if (state.active != null && state.screen !in listOf(Screen.HOME, Screen.CREATE, Screen.SETTINGS, Screen.SAVES))
                             "${state.screen.name}:${state.active?.save?.id}" else state.screen.name
                         screenState.SaveableStateProvider(key) {
                             when (state.screen) {
                                 Screen.HOME -> Home(state, model)
                                 Screen.CREATE -> Creator(state, model)
-                                Screen.JOURNEY -> Journey(state, model)
+                                Screen.JOURNEY -> AdventureScreen(state, model)
+                                Screen.JOURNAL -> Journal(state, model)
+                                Screen.CULTIVATION -> CultivationScreen(state, model)
+                                Screen.INVENTORY, Screen.TECHNIQUES, Screen.QUESTS, Screen.MAP, Screen.NPCS, Screen.EVENTS -> AdventureLibrary(state, model)
                                 Screen.STATUS -> CharacterStatus(state, model)
                                 Screen.SAVES -> SaveManager(state, model,
                                     onImport = { importPicker.launch(arrayOf("application/json", "text/*", "application/octet-stream")) },
@@ -121,7 +134,7 @@ fun ImmortalWorldApp(model: GameViewModel) {
                         }
                     }
                 }
-                if (state.busy) {
+                if (state.busy && !state.aiWorking) {
                     Box(Modifier.matchParentSize().testTag("operation_in_progress").background(Ink.copy(alpha = .78f))
                         .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}, contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -176,7 +189,7 @@ private fun Home(state: GameUiState, model: GameViewModel) {
         item {
             Text("OFFLINE-FIRST  /  YOUR WORLD, YOUR SAVE", color = Gold, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp)
             Spacer(Modifier.height(8.dp))
-            Text("Phase 1 foundation: character creation, character records, journal, and portable saves. Cultivation actions, combat, exploration, and AI storytelling are not implemented yet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Active adventure: type your intentions, explore, speak, trade, and fight. Optional cultivation advances in-game hours instantly. The engine owns outcomes; AI narration is optional.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -227,7 +240,7 @@ private fun Creator(state: GameUiState, model: GameViewModel) {
                     Text("Talent ${preview.attributes.talent} · Comprehension ${preview.attributes.comprehension} · Vitality ${preview.attributes.vitality}")
                     Text("Qi Refining · Stage 1 · ${preview.cultivation.maximumLifespan} years lifespan", color = Jade)
                 } else Text("Complete the fields above to preview your character.")
-                Text("Normal starts share the same realm, but not the same potential. Difficulty is saved for later gameplay systems. Advanced sandbox creation belongs to Phase 5.", style = MaterialTheme.typography.bodySmall)
+                Text("Normal starts share the same realm, but not the same potential. Difficulty affects combat and breakthroughs. Advanced sandbox creation belongs to Phase 5.", style = MaterialTheme.typography.bodySmall)
             }
         }
         item {
@@ -238,11 +251,11 @@ private fun Creator(state: GameUiState, model: GameViewModel) {
 }
 
 @Composable
-private fun Journey(state: GameUiState, model: GameViewModel) {
+private fun Journal(state: GameUiState, model: GameViewModel) {
     val s = state.active?.save ?: return
     var note by rememberSaveable(s.id) { mutableStateOf("") }
     var discard by remember { mutableStateOf(false) }
-    LazyColumn(modifier = Modifier.testTag("journey"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+    LazyColumn(modifier = Modifier.testTag("journal"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         item { Heading("DAY ${s.world.day} / ${s.world.name.uppercase()}", s.world.currentLocation, "${s.player.name} · ${s.realms.first { it.id == s.player.cultivation.realmId }.name} · Stage ${s.player.cultivation.substage}") }
         item {
             Panel {
@@ -262,7 +275,7 @@ private fun Journey(state: GameUiState, model: GameViewModel) {
             OutlinedTextField(note, { if (it.length <= 2000) note = it }, label = { Text("Plans, promises, and reflections") }, minLines = 3, maxLines = 7, modifier = Modifier.fillMaxWidth())
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("${note.length}/2000", Modifier.weight(1f), style = MaterialTheme.typography.labelSmall)
-                TextButton(onClick = { model.addJournal(note); note = "" }, enabled = note.isNotBlank() && state.preferencesReady) { Text("Add entry") }
+                TextButton(onClick = { model.addJournal(note); note = "" }, enabled = note.isNotBlank() && state.preferencesReady && !state.busy) { Text("Add entry") }
             }
         }
         item { Text("YOUR CHRONICLE", color = Gold, letterSpacing = 2.sp, style = MaterialTheme.typography.labelMedium) }
@@ -282,7 +295,7 @@ private fun CharacterStatus(state: GameUiState, model: GameViewModel) {
     LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         item {
             Heading("CHARACTER RECORD", p.name, "${p.race} · ${p.gender} · Age ${p.age}")
-            TextButton(onClick = { rename = true }) { Text("Change name") }
+            TextButton(onClick = { rename = true }, enabled = !state.busy) { Text("Change name") }
         }
         item { Panel {
             Text(p.appearance, fontFamily = FontFamily.Serif, style = MaterialTheme.typography.titleLarge)
@@ -295,7 +308,7 @@ private fun CharacterStatus(state: GameUiState, model: GameViewModel) {
             Detail("Progress", "${p.cultivation.progress}%"); Detail("Method", p.cultivation.method)
             Detail("Lifespan", "${p.cultivation.maximumLifespan} years"); Detail("Health", "${p.health} / ${p.maxHealth}")
             Detail("Spiritual energy", "${p.energy} / ${p.maxEnergy}")
-            Text("Cultivation and breakthrough actions arrive in Phase 2.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Cultivation and breakthroughs are player-controlled actions in the Cultivation screen.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } }
         item { Panel {
             Text("INNATE FOUNDATION", color = Gold, style = MaterialTheme.typography.labelLarge)
@@ -310,7 +323,7 @@ private fun CharacterStatus(state: GameUiState, model: GameViewModel) {
             Text(technique.name, style = MaterialTheme.typography.titleMedium); Text(technique.description)
             Detail("Rank / mastery", "${technique.rank} / ${technique.mastery}%")
             Detail("Energy cost / power", "${technique.energyCost} / ${technique.power}")
-            Text("Recorded for Phase 2 combat; not usable yet.", style = MaterialTheme.typography.bodySmall)
+            Text("Use this technique during an encounter from the Techniques screen or adventure input.", style = MaterialTheme.typography.bodySmall)
         } }
         item { Text("INVENTORY · ${p.spiritStones} SPIRIT STONES", color = Gold, style = MaterialTheme.typography.labelLarge) }
         items(p.inventory, key = { it.id }) { item -> Panel {
@@ -372,17 +385,18 @@ private fun Settings(state: GameUiState, model: GameViewModel) {
             Text("Imports are validated before database writes and always create a separate slot. Unsupported versions and invalid data are rejected.")
             TextButton(onClick = { model.navigate(Screen.SAVES) }) { Text("Open save manager") }
         } }
+        item { AiSettingsPanel(state, model) }
         item { Panel {
-            Text("BUILD SCOPE · PHASE 1", color = Jade, style = MaterialTheme.typography.labelLarge)
-            Text("Character generation and inspection, journal editing, multiple campaigns, manual/autosaving, backups, and JSON portability.")
-            Text("AI providers, combat, world simulation, and the God Mode editor are planned modules, not active features in this build. Difficulty and cultivation rules are stored but not simulated yet.")
-            Text("No network permission is requested. No API keys or personal information are transmitted.", color = Gold)
+            Text("BUILD SCOPE · ACTIVE ADVENTURE", color = Jade, style = MaterialTheme.typography.labelLarge)
+            Text("The existing creator, journal, independent campaigns, saves and backups are retained. Adventure actions always commit before optional AI narration, even when journal autosave is off.")
+            Text("Available now: a bounded connected world, NPC memories, trade, quests, sect membership, turn-based combat and optional activities. Large-scale sect management, procedural worlds and the God Mode editor are still future work; existing God Mode save flags are preserved.")
+            Text("Network calls occur only when you enable a provider or test its connection. Offline commands and saves do not need AI.", color = Gold)
         } }
     }
 }
 
 @Composable
-private fun Heading(eyebrow: String, title: String, subtitle: String) {
+internal fun Heading(eyebrow: String, title: String, subtitle: String) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(eyebrow, color = Jade, letterSpacing = 2.sp, style = MaterialTheme.typography.labelSmall)
         Text(title, fontFamily = FontFamily.Serif, fontSize = 32.sp, lineHeight = 38.sp, color = Gold)
@@ -390,25 +404,25 @@ private fun Heading(eyebrow: String, title: String, subtitle: String) {
     }
 }
 @Composable
-private fun Panel(content: @Composable ColumnScope.() -> Unit) {
+internal fun Panel(content: @Composable ColumnScope.() -> Unit) {
     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
     }
 }
 @Composable
-private fun Detail(label: String, value: String) {
+internal fun Detail(label: String, value: String) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(label, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
         Text(value, Modifier.weight(1.2f), fontWeight = FontWeight.Medium, style = MaterialTheme.typography.bodyMedium)
     }
 }
 @Composable
-private fun Field(label: String, value: String, max: Int, singleLine: Boolean = true, onChange: (String) -> Unit) {
+internal fun Field(label: String, value: String, max: Int, singleLine: Boolean = true, onChange: (String) -> Unit) {
     OutlinedTextField(value, { if (it.length <= max) onChange(it) }, label = { Text(label) },
         singleLine = singleLine, minLines = if (singleLine) 1 else 2, modifier = Modifier.fillMaxWidth())
 }
 @Composable
-private fun Choice(label: String, current: String, options: List<String>, onChange: (String) -> Unit) {
+internal fun Choice(label: String, current: String, options: List<String>, onChange: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
     OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
         Column(Modifier.weight(1f)) { Text(label, style = MaterialTheme.typography.labelSmall); Text(current) }; Text("⌄")

@@ -73,8 +73,9 @@ data class WorldState(
     val journal: List<JournalEntry> = emptyList(),
 )
 data class GameSave(
-    val format: String = "xianxia-save", val version: Int = 1,
+    val format: String = "xianxia-save", val version: Int = 2,
     val id: String, val name: String, val createdAt: Long, val updatedAt: Long,
     val randomState: Long, val player: Character, val world: WorldState,
     val rules: GameRules = GameRules(), val realms: List<Realm> = Realms.defaults,
+    val adventure: AdventureState? = null,
 )

@@ -7,5 +7,6 @@ import com.immortalworld.data.*
 class ImmortalWorldApplication : Application() {
     val database by lazy { Room.databaseBuilder(this, GameDatabase::class.java, "immortal-world.db").build() }
     val saves by lazy { SaveRepository(database) }
+    val aiPreferences by lazy { com.immortalworld.ai.AiPreferences(this) }
     val preferences by lazy { Preferences(this) }
 }

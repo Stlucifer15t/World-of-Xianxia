@@ -13,6 +13,7 @@ import org.junit.*
 import org.junit.Assert.*
 import org.junit.runner.RunWith
 import java.util.UUID
+import org.json.JSONObject
 
 @RunWith(AndroidJUnit4::class)
 class SaveRepositoryTest {
@@ -133,4 +134,33 @@ class SaveRepositoryTest {
         assertTrue(runCatching { repository.delete(a.save.id, a.revision) }.isFailure)
         assertEquals(updated, repository.load(a.save.id))
     }
+    @Test fun oldSaveMigrationKeepsOriginalBackupAndPlayer() = runBlocking {
+        val original = repository.create(campaign())
+        val oldJson = JSONObject(SaveCodec.encode(original.save)).put("version", 1).apply { remove("adventure") }.toString()
+        db.saves().putState(StateEntity(original.save.id, oldJson))
+        val loaded = repository.load(original.save.id)
+        assertEquals(original.save.player, loaded.save.player)
+        val upgraded = repository.save(AdventureFactory.ensure(loaded.save), loaded.revision, "Before adventure initialization / v1 migration")
+        assertEquals(2, upgraded.save.version)
+        assertNotNull(upgraded.save.adventure)
+        val backup = db.saves().backup(repository.backups(original.save.id).first().id)!!
+        assertEquals(1, JSONObject(backup.json).getInt("version"))
+    }
+    @Test fun gameplayCombatAndMemoriesSurviveCloseReopenAndReplay() = runBlocking {
+        val original = campaign()
+        var loaded = repository.create(AdventureFactory.ensure(original.copy(world = original.world.copy(currentLocation = "Azure Cloud Village"))))
+        val engine = AdventureEngine()
+        listOf(GameAction(ActionKind.TALK, "mei", "Where are the ruins?"), GameAction(ActionKind.CHALLENGE, "wen"), GameAction(ActionKind.DEFEND)).forEachIndexed { index, command ->
+            val result = engine.execute(loaded.save, command, "player request $index", "request-$index")
+            loaded = repository.save(result.state, loaded.revision)
+        }
+        db.close(); open()
+        val restored = repository.load(loaded.save.id)
+        assertEquals(loaded, restored)
+        assertNotNull(restored.save.adventure!!.combat)
+        assertFalse(restored.save.adventure!!.npcs.first { it.character.id == "mei" }.memories.isEmpty())
+        assertEquals(engine.apply(loaded.save, GameAction(ActionKind.ATTACK)), engine.apply(restored.save, GameAction(ActionKind.ATTACK)))
+        assertEquals(restored.save, engine.execute(restored.save, GameAction(ActionKind.DEFEND), "retry", "request-2").state)
+    }
+
 }
