@@ -88,6 +88,7 @@ internal fun AdventureScreen(state: GameUiState, model: GameViewModel) {
                     Text("REVIEW AI INTERPRETATION", color = MaterialTheme.colorScheme.secondary)
                     Text("${pending.action.kind}: ${pending.action.target}\n${pending.action.detail}\nDuration (activities): ${pending.action.hours}h")
                     Text("No mechanics have run. Confirm only if this matches your intention.", style = MaterialTheme.typography.bodySmall)
+                    if (IntentParser.needsReview(pending.input)) Text("Conditions are not automatically fulfilled. Confirm only if you want the displayed operation resolved now, without assuming NPC permission.", color = MaterialTheme.colorScheme.secondary)
                     FlowRow { Button(onClick = model::confirmProposal, enabled = !state.busy) { Text("Confirm action") }; TextButton(onClick = model::dismissProposal) { Text("Reject") } }
                 } } }
                 if (a.history.isEmpty()) item {

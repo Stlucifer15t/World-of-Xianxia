@@ -1,5 +1,15 @@
 # Delivery phases and acceptance gates
 
+## Story-first refinement (0.3)
+
+The existing adventure now has larger native prose/dialogue, a compact controls
+sheet, contextual read-only scenes, visit-aware arrivals, persistent story snapshots,
+state-grounded NPC replies, notice inspection and seeded spiritual sense. V1/v2
+saves migrate to v3 without resetting mechanics. See `LIVING_STORY.md` and the
+current verification record in `TESTING.md`. This is not completion of the larger
+procedural-world, autonomous-NPC or full God Mode editor milestones.
+
+
 The full Immortal World specification is the direction, not a statement of current
 completion. Do not ship buttons for systems whose mechanics do not exist.
 

@@ -88,6 +88,8 @@ object StoryChecks {
             val s = sample(); val request = IntentParser.parse(s, "examine Elder Wen with spiritual sense")!!
             check(request.kind == ActionKind.SENSE && request.target == "wen")
             check(IntentParser.parse(s, "Do not examine Elder Wen with spiritual sense") == null)
+            check(IntentParser.needsReview("Do not examine Elder Wen with spiritual sense"))
+            check(!IntentParser.needsReview("Ask Mei if herbs are in stock"))
             check(IntentParser.parse(s, "Examine Elder Wen with spiritual sense if he allows it") == null)
             check(IntentParser.parse(s, "Think about Elder Wen and spiritual sense") == null)
             val result = engine.apply(s, request)

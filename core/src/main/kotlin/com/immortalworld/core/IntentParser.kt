@@ -3,12 +3,18 @@ package com.immortalworld.core
 /** Offline convenience interpreter. Unknown wording goes to the AI or a bounded creative attempt,
  * never to a magical success/state patch. NPC quoted speech is not executed as a command. */
 object IntentParser {
+    private fun normalized(input: String) = input.trim().lowercase().removePrefix("i ").removePrefix("want to ").removePrefix("would like to ")
+    fun needsReview(input: String): Boolean {
+        val t = normalized(input)
+        if (listOf("say", "ask", "talk", "speak", "tell").any { t == it || t.startsWith("$it ") }) return false
+        return Regex("\\b(do not|don't|never|unless|if|might|could)\\b").containsMatchIn(t)
+    }
     fun parse(save: GameSave, input: String): GameAction? {
         val s = AdventureFactory.ensure(save); val a = s.adventure!!
-        val t = input.trim().lowercase().removePrefix("i ").removePrefix("want to ").removePrefix("would like to ")
+        val t = normalized(input)
         fun starts(vararg verbs: String) = verbs.any { t == it || t.startsWith("$it ") }
         // Conditional/negated instructions need interpretation, not an unconditional local command.
-        if (!starts("say", "ask", "talk", "speak", "tell") && Regex("\\b(do not|don't|never|unless|if|might|could)\\b").containsMatchIn(t)) return null
+        if (needsReview(input)) return null
         val npc = a.npcs.mapNotNull { n ->
             val full = t.indexOf(n.character.name.lowercase()).takeIf { it >= 0 }
             val short = Regex("\\b${Regex.escape(n.character.id)}\\b").find(t)?.range?.first

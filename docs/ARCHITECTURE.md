@@ -1,6 +1,31 @@
 # Architecture and authority boundaries
 
-## Active-adventure extension (0.2)
+## Living-story extension (0.3)
+
+`SceneNarrator` is a platform-independent, read-only presentation of the existing
+save and schedules. It upgrades exact stock location descriptions, derives cosmetic
+weather from world ID/time, and presents current NPC work/stock/encounters without
+consuming engine RNG. It does not spawn another simulation or storage system.
+
+`ActionRecord` now keeps offline prose, resolved dialogue and an observed-scene
+snapshot alongside the original facts/calculations. `ContextBuilder` uses that
+snapshot for historical narration, excluding private goals/unspoken knowledge and
+present-day targets. `StoryText` consolidates short fragmented output. The provider
+receives explicit pacing and bounded longer scene budgets but still cannot mutate
+mechanics. A seeded `SENSE` action and public-notice inspection are normal validated
+engine operations, not narrator-created rewards.
+
+`AdventureScreen` uses native scalable prose and a persistent adaptive composer;
+secondary controls move into a standard Material bottom sheet. Historical entries
+are progressively revealed, never deleted for layout. Existing screens, keyboard
+inset handling, action commit ordering and save repository are retained.
+
+Portable v3 adds receipt presentation fields and visits; v1/v2 decode migrations
+preserve mechanical state and custom text. The next overwrite keeps the original
+raw JSON as a backup. SQL schema v1 is unchanged. See `LIVING_STORY.md` for behavior,
+`SAVE_FORMAT.md` for exact bounds, and `TESTING.md` for verified builds.
+
+## Active-adventure extension (0.2, retained)
 
 The Phase 1 storage/shell described below is retained. `AdventureEngine` now
 implements `GameEngine`, using the original character models, generator, RNG and

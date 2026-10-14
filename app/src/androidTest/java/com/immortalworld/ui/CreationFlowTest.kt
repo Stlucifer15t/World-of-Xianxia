@@ -123,6 +123,12 @@ class CreationFlowTest {
         compose.onNodeWithTag("nav_journey").performClick()
         awaitNode(hasTestTag("adventure"))
         compose.onNodeWithTag("action_input").assertTextContains("An unfinished, deliberately longer approach", substring = true)
+        compose.onNodeWithTag("action_input").performTextReplacement("Examine Elder Wen with spiritual sense if he allows it")
+        compose.onNodeWithTag("submit_action").performClick()
+        awaitNode(hasText("No action taken:", substring = true)); awaitOperation()
+        compose.onNodeWithText("OK", substring = false).performClick()
+        compose.onNodeWithText("Day 1 · 09:00", substring = true).assertIsDisplayed()
+        compose.onNodeWithTag("action_input").assertTextContains("Examine Elder Wen with spiritual sense if he allows it")
     }
 
 }

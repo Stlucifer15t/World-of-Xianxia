@@ -182,13 +182,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         mutable.update { it.copy(pendingAction = null, aiNotice = null) }
         val local = withContext(Dispatchers.Default) { IntentParser.parse(active.save, input) }
         if (local != null) resolve(local, input)
-        else if (!mutable.value.aiConfig.enabled) resolve(GameAction(ActionKind.ATTEMPT, detail = input.take(1000)), input)
+        else if (!mutable.value.aiConfig.enabled) {
+            require(!IntentParser.needsReview(input)) { "No action taken: this request contains a condition or prohibition. Describe one immediate action, or ask the NPC your question in your own words." }
+            resolve(GameAction(ActionKind.ATTEMPT, detail = input.take(1000)), input)
+        }
         else {
             mutable.update { it.copy(aiWorking = true) }
             val proposal = CompatibleStoryteller(mutable.value.aiConfig).proposeAction(input, ContextBuilder.build(active.save, input))
             // Unknown wording interpreted by an external provider never silently spends resources,
             // starts combat, joins factions, or chooses dialogue for the player.
-            if (proposal.kind in setOf(ActionKind.OBSERVE, ActionKind.INVESTIGATE, ActionKind.ATTEMPT)) resolve(proposal, input)
+            if (!IntentParser.needsReview(input) && proposal.kind in setOf(ActionKind.OBSERVE, ActionKind.INVESTIGATE, ActionKind.ATTEMPT)) resolve(proposal, input)
             else mutable.update { it.copy(pendingAction = PendingAction(proposal, input, active.save.id, active.revision), aiNotice = "Review the AI's interpretation before any mechanics are applied.") }
         }
     }
@@ -201,6 +204,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun attemptOffline() = task {
         val input = mutable.value.actionDraft.trim(); require(input.isNotEmpty()) { "Describe your approach first." }
+        require(!IntentParser.needsReview(input)) { "No action taken: clarify the condition or prohibition before attempting an offline action." }
         resolve(GameAction(ActionKind.ATTEMPT, detail = input.take(1000)), input, narrate = false)
     }
     fun command(action: GameAction, label: String) = task { mutable.update { it.copy(pendingAction = null) }; resolve(action, label) }

@@ -1,5 +1,10 @@
 # Active, player-controlled adventure — 0.2
 
+**Presentation update:** [Living story 0.3](LIVING_STORY.md) supersedes the old
+Journey layout and narrator budget described in this document. The mechanical
+rules below remain, with public notice inspection and seeded spiritual sense added.
+Portable saves are now v3 with v1/v2 import support.
+
 This increment **extends** the existing `:core`, Compose screens, AndroidViewModel,
 Room aggregate repository, DataStore preferences, character generator and save
 codec. It does not replace the application or delete journal/save features.
@@ -182,7 +187,7 @@ stored separately from campaigns. It is not placed in exports, UI saved-state
 bundles or model messages. Redirects are disabled to avoid forwarding credentials
 to another host. No real API keys are checked into the repository.
 
-Only the submitted intention, relevant scene/NPC knowledge/memories, bounded target
+Only the submitted intention, observed scene/recorded interaction memories, bounded target
 IDs, a compact player summary and authoritative facts are sent. Private journal
 entries and hidden traits are excluded. Provider calls are opt-in and may incur
 provider charges. **Test connection** sends no campaign information.

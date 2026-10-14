@@ -1,4 +1,4 @@
-# Portable save contract — version 2 (version 1 imports supported)
+# Portable save contract — version 3 (version 1/2 imports supported)
 
 Extension: `.xianxia.json`. MIME: `application/json`. Encoding: UTF-8. The actual
 executable contract is `SaveCodec` plus `SaveValidator`; the specification's short
@@ -12,7 +12,7 @@ All IDs are opaque, nonblank strings, at most 100 UTF-16 code units (realm IDs: 
 | Field | Type | Meaning |
 |---|---|---|
 | `format` | string | Exactly `xianxia-save` |
-| `version` | integer | Exports use `2`; imports accept `1` and `2` |
+| `version` | integer | Exports use `3`; imports accept `1`, `2`, `3` |
 | `id` | string | Source campaign ID; replaced on import |
 | `name` | string | Campaign title, 1–80 code units |
 | `createdAt`, `updatedAt` | integer | Nonnegative Unix epoch milliseconds, updated ≥ created |
@@ -21,7 +21,7 @@ All IDs are opaque, nonblank strings, at most 100 UTF-16 code units (realm IDs: 
 | `world` | object | Persistent world metadata and journal |
 | `rules` | object | Per-campaign gameplay settings |
 | `realms` | array | Configured ordered hierarchy, 1–64 unique entries |
-| `adventure` | object or null | Required in v2; absent in v1; active world/encounter state below |
+| `adventure` | object or null | Required in v2/v3; absent in v1; active world/encounter state below |
 
 Do not round `randomState` through JavaScript's floating-point number type. Use a
 JSON editor that preserves signed 64-bit integers. Save files are for personal
@@ -85,7 +85,7 @@ Each entry: `id`, `name` (≤80), `stages` (integer 1–99), `baseLifespan` (int
 1–1,000,000,000). The default hierarchy spans Qi Refining through Immortal Emperor.
 Edited hierarchies can be imported if all references and stage bounds validate.
 
-## Version 2 adventure aggregate
+## Version 3 adventure aggregate
 
 `adventure` is nullable for uninitialized campaigns. Activation initializes missing
 state through a backed-up repository update. All object fields are required;
@@ -103,12 +103,18 @@ unknown fields fail closed. Limits are enforced in `AdventureValidator`.
   (`AVAILABLE`, `ACTIVE`, `READY`, `COMPLETE`), reward (0–1 million).
 - `events` (≤200): id, day, hour, text. Dates must not exceed current world day.
 - `history` (≤100): id, input, day, hour, facts (1–30), calculations (≤30),
-  narration (≤3,000 characters), accepted boolean. Input/fact/calculation strings
+  narration (≤6,000 characters), accepted boolean. Input/fact/calculation strings
   are bounded to 2,000 characters. Receipt IDs prevent mechanical replay.
+  V3 also requires `kind` (empty for legacy entries or an `ActionKind` name),
+  `locationId` (empty for legacy entries or a valid location reference), `story`
+  (≤5,000), `dialogue` (≤1,500) and `sceneContext` (≤3,500 characters). Legacy
+  empty strings do not claim a reconstructed historical scene.
 - `combat` (nullable): complete enemy character, nullable NPC id, turn (1–1 million),
   position (`close`, `cover`, `high_ground`). Active enemies must have positive HP.
 - `idlePlan` (nullable): supported activity, method, useHerb boolean, checkpointMillis.
   A plan requires `rules.passiveCultivation`; timestamps are bounded nonnegative longs.
+- `visits`: ≤128 location-ID keys with integer counts 1–1 billion. Counts advance
+  on accepted travel, not UI rendering. Cosmetic weather is derived, not stored.
 - `searchCounts`: location-ID map of integer counts (0–3); `defeated`: ≤100 unique IDs.
 
 Provider configuration/API keys are never part of this object or any campaign save.
@@ -142,10 +148,22 @@ The dedicated graphical God Mode editor remains future work, not part of this in
 
 ## Migration policy
 
-The implemented v1 → v2 migration preserves every v1 game field and replaces only
-the format version, initially leaving `adventure` null. Activating that campaign
-seeds its adventure and uses the existing transactional overwrite/backup path.
-The old v1 snapshot remains in the backup until normal retention prunes it.
+V1 → v3 preserves every v1 game field and replaces only the format version,
+initially leaving `adventure` null. Activating that campaign seeds its adventure
+and uses the existing transactional overwrite/backup path. The old snapshot remains
+in the backup until normal retention prunes it.
+
+V2 → v3 retains every mechanical field, original receipt/fact/narration, NPC record,
+RNG state, journal and game rule. It adds an initial visit count of 1 for the current
+location only; it does **not** invent counts for unrecorded old visits. New receipt
+fields default to empty, meaning “not recorded.” Exact original stock location
+strings are upgraded to the new descriptions, but customized descriptions are not
+replaced. Unknown v2 fields (including mislabeled v3 fields) still fail closed.
+
+Decoding is a read-only migration. The next repository overwrite stores v3 while
+backing up the prior raw v2 snapshot atomically; a v2 backup can be restored through
+the same decoder. Export serializes the migrated v3 snapshot. Older app versions
+will not read v3 exports; retain an original export if you need to roll back.
 
 Database schema v1 does not change: adventure data is part of the JSON aggregate.
 Future schema/format changes still require explicit migrations and fixtures; never

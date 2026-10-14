@@ -125,7 +125,8 @@ object SceneNarrator {
         val description = when (request.kind) {
             ActionKind.TRAVEL -> {
                 val road = route(before.adventure!!.locationId, a.locationId)
-                val travel = if (road == null) "The surroundings change to ${s.world.currentLocation}. This passage has no established road description; it was permitted by the enabled sandbox travel rules."
+                val travel = if (road == null && a.locationId !in AdventureEngine.neighbors(before.adventure!!.locationId)) "The surroundings change to ${s.world.currentLocation}. This passage has no established connecting road; it was permitted by the enabled sandbox travel rules and takes two hours."
+                    else if (road == null) "The recorded road connects ${before.world.currentLocation} to ${s.world.currentLocation}. The journey takes two hours; the land along this custom route has no recorded description."
                     else "$road The journey from ${before.world.currentLocation} to ${s.world.currentLocation} takes two hours."
                 listOf(travel) + scene(s)
             }
