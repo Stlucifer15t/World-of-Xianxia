@@ -35,14 +35,18 @@ private fun StoryProse(text: String, dialogue: Boolean = false) {
 }
 
 @Composable
-private fun StoryReceipt(record: ActionRecord) {
+private fun StoryReceipt(record: ActionRecord, liveDraft: String = "") {
     Column(Modifier.fillMaxWidth().testTag("story_${record.id}")) {
         Text("YOU · Day ${record.day}, ${record.hour.toString().padStart(2, '0')}:00", color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.labelMedium)
         Text(record.input, fontSize = 17.sp, lineHeight = 25.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp, bottom = 18.dp))
         if (!record.accepted) Text("ACTION NOT RESOLVED", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
         if (record.accepted && record.kind in listOf("BREAKTHROUGH", "JOIN", "TURN_IN", "CHALLENGE"))
             Text("A TURN IN THE JOURNEY", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(bottom = 12.dp))
-        StoryProse(record.narration.ifBlank { record.story.ifBlank { record.facts.joinToString(" ") } })
+        if (liveDraft.isNotBlank()) {
+            Text("STREAMING DRAFT · UNVERIFIED · NOT SAVED", color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.labelMedium)
+            StoryProse(liveDraft)
+            Text("Offline result remains authoritative until the complete narration passes validation.", style = MaterialTheme.typography.bodySmall)
+        } else StoryProse(record.narration.ifBlank { record.story.ifBlank { record.facts.joinToString(" ") } })
         if (record.dialogue.isNotBlank()) StoryProse(record.dialogue, dialogue = true)
         var expanded by rememberSaveable(record.id) { mutableStateOf(false) }
         TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Hide action details" else "Action details · facts & calculations") }
@@ -98,7 +102,7 @@ internal fun AdventureScreen(state: GameUiState, model: GameViewModel) {
                         Text("Your words direct the journey. Ask Mei about cultivation resources, inspect the recruitment notice, or describe your own approach.", fontSize = 16.sp, lineHeight = 24.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                items(a.history.takeLast(shown).asReversed(), key = { it.id }) { record -> StoryReceipt(record) }
+                items(a.history.takeLast(shown).asReversed(), key = { it.id }) { record -> StoryReceipt(record, if (state.streamingRecordId == record.id) state.streamingText else "") }
                 if (a.history.size > shown) item { TextButton(onClick = { shown += 10 }) { Text("Read earlier entries (${a.history.size - shown})") } }
                 if (a.locationId == "ruins" && "wolf" !in a.defeated && a.combat == null) item {
                     Text("The inner courtyard is guarded. Searching it starts combat; investigating the outer wards does not.", color = MaterialTheme.colorScheme.secondary, fontSize = 16.sp, lineHeight = 24.sp)
@@ -290,30 +294,5 @@ internal fun AdventureLibrary(state: GameUiState, model: GameViewModel) {
             items(a.events.asReversed(), key = { it.id }) { event -> Panel { Text("Day ${event.day} · ${event.hour}:00", color = MaterialTheme.colorScheme.secondary); Text(event.text) } }
         }
         if (state.screen != Screen.EVENTS) a.history.lastOrNull()?.let { last -> item { Panel { Text("LATEST ENGINE RESULT", color = MaterialTheme.colorScheme.primary); last.facts.forEach { Text(it) } } } }
-    }
-}
-
-@Composable
-internal fun AiSettingsPanel(state: GameUiState, model: GameViewModel) {
-    var enabled by remember(state.aiConfig) { mutableStateOf(state.aiConfig.enabled) }
-    var endpoint by remember(state.aiConfig) { mutableStateOf(state.aiConfig.endpoint) }
-    var name by remember(state.aiConfig) { mutableStateOf(state.aiConfig.model) }
-    // Deliberately not rememberSaveable: API keys must not be serialized into a UI state bundle.
-    var key by remember(state.aiConfig) { mutableStateOf(state.aiConfig.apiKey) }
-    var temperature by remember(state.aiConfig) { mutableStateOf(state.aiConfig.temperature.toString()) }
-    val config = AiConfig(enabled, endpoint.trim(), name.trim(), key.trim(), temperature.toDoubleOrNull() ?: Double.NaN)
-    Panel {
-        Text("AI STORYTELLER · OPTIONAL", color = MaterialTheme.colorScheme.secondary)
-        Row { Switch(enabled, { enabled = it }, enabled = !state.busy); Text("Enable provider calls", Modifier.padding(12.dp)) }
-        Field("Complete HTTPS chat/completions URL", endpoint, 500) { endpoint = it }
-        Field("Model name", name, 100) { name = it }
-        OutlinedTextField(key, { if (it.length <= 1000) key = it }, label = { Text("API key (stored encrypted on device)") }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
-        Field("Temperature (0–2)", temperature, 8) { temperature = it }
-        Text("Only relevant scene, NPC memories, your submitted action and engine facts are sent to this endpoint. Your full save, journal, hidden traits and other provider credentials are not sent. Network use may incur provider charges.", style = MaterialTheme.typography.bodySmall)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { model.configureAi(config) }, enabled = !state.busy) { Text("Save AI settings") }
-            OutlinedButton(onClick = { model.testAi(config) }, enabled = !state.busy) { Text("Test connection") }
-        }
-        Text("One compatible provider configuration is supported in this increment. Calls are cancellable. Failed narration never rolls back or replays resolved mechanics.", style = MaterialTheme.typography.bodySmall)
     }
 }

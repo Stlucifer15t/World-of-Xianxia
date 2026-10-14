@@ -105,7 +105,7 @@ fun ImmortalWorldApp(model: GameViewModel) {
                     if (state.aiWorking || state.aiNotice != null) {
                         Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
                             Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                                Text(if (state.aiWorking) "AI request in progress. You can inspect records or cancel." else state.aiNotice.orEmpty(), style = MaterialTheme.typography.bodySmall)
+                                Text(if (state.knowledgeWorking) "Looking up optional cultivation references. You can cancel; saved mechanics are safe." else if (state.aiWorking) "AI request in progress. You can inspect records or cancel." else state.aiNotice.orEmpty(), style = MaterialTheme.typography.bodySmall)
                                 if (state.aiWorking) TextButton(onClick = model::cancelAi) { Text("Cancel AI request") }
                                 else if (state.aiConfig.enabled && state.active?.save?.adventure?.history?.isNotEmpty() == true)
                                     TextButton(onClick = model::retryNarration, enabled = !state.busy) { Text("Retry narration only") }
@@ -373,7 +373,7 @@ private fun SaveManager(state: GameUiState, model: GameViewModel, onImport: () -
 
 @Composable
 private fun Settings(state: GameUiState, model: GameViewModel) {
-    LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+    LazyColumn(Modifier.testTag("settings"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         item { Heading("PREFERENCES", "A world that stays yours.", "Local gameplay data never depends on an AI provider or a conversation history.") }
         item { Panel {
             Row(verticalAlignment = Alignment.CenterVertically) {

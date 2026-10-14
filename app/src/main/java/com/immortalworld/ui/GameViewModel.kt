@@ -2,6 +2,10 @@ package com.immortalworld.ui
 
 import android.app.Application
 import android.net.Uri
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.immortalworld.ImmortalWorldApplication
@@ -23,6 +27,10 @@ data class GameUiState(
     val draft: CreationOptions = CreationOptions(), val seed: Long = System.nanoTime(),
     val aiConfig: AiConfig = AiConfig(), val aiWorking: Boolean = false, val actionDraft: String = "",
     val pendingAction: PendingAction? = null, val aiNotice: String? = null,
+    val aiReady: Boolean = false, val aiProfiles: List<AiProfile> = emptyList(), val activeProfileId: String = "",
+    val aiConnection: String = "Loading saved provider…", val catalogLoading: Boolean = false, val catalog: ModelCatalog? = null,
+    val knowledgeResult: KnowledgeResult = KnowledgeResult(), val knowledgeWorking: Boolean = false,
+    val streamingRecordId: String? = null, val streamingText: String = "",
 )
 class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as ImmortalWorldApplication
@@ -31,10 +39,32 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     val state: StateFlow<GameUiState> = mutable.asStateFlow()
     private val engine = AdventureEngine()
     private var activeJob: Job? = null
+    private var catalogJob: Job? = null
+    private var reconnectJob: Job? = null
+    private var catalogEpoch = 0L
+    private var catalogKey = ""
+    private var lastConnectionCheck = 0L
+    private val knowledge = KnowledgeService()
+    private val connectivity = application.getSystemService(ConnectivityManager::class.java)
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+            if (!capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) return
+            viewModelScope.launch {
+                if (!mutable.value.aiReady || !mutable.value.aiConfig.enabled || !mutable.value.aiConfig.autoConnect || mutable.value.catalogLoading) return@launch
+                if (mutable.value.aiConnection.startsWith("Ready") || reconnectJob?.isActive == true) return@launch
+                reconnectJob = viewModelScope.launch {
+                    delay((30_000L - (SystemClock.elapsedRealtime() - lastConnectionCheck)).coerceAtLeast(0))
+                    val current = mutable.value.aiConfig
+                    if (current.enabled && current.autoConnect) detectModels(current)
+                }
+            }
+        }
+    }
     init {
+        runCatching { connectivity.registerDefaultNetworkCallback(networkCallback) }
         viewModelScope.launch {
-            try { val config = app.aiPreferences.load(); mutable.update { it.copy(aiConfig = config) } }
-            catch (e: Exception) { mutable.update { it.copy(error = e.message) } }
+            try { installProfiles(app.aiPreferences.loadProfiles()) }
+            catch (e: Exception) { mutable.update { it.copy(aiReady = true, aiConnection = "Saved provider could not be loaded. Offline play is available; existing settings were not overwritten.") } }
         }
         viewModelScope.launch {
             repository.slots.catch { e -> mutable.update { it.copy(error = "Unable to read save slots: ${e.message}") } }
@@ -44,6 +74,40 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             app.preferences.values.catch { e -> mutable.update { it.copy(error = "Unable to read preferences: ${e.message}") } }
                 .collect { preferences -> mutable.update { it.copy(preferences = preferences, preferencesReady = true) } }
         }
+    }
+    override fun onCleared() {
+        runCatching { connectivity.unregisterNetworkCallback(networkCallback) }
+        super.onCleared()
+    }
+    private fun installProfiles(store: AiProfileStore) {
+        catalogEpoch++; catalogJob?.cancel(); reconnectJob?.cancel(); knowledge.clear(); catalogKey = ""
+        mutable.update { it.copy(aiReady = true, aiProfiles = store.profiles, activeProfileId = store.activeId, aiConfig = store.active.config,
+            catalog = null, catalogLoading = false, knowledgeResult = KnowledgeResult(),
+            aiConnection = store.warning ?: if (store.active.config.enabled) "Restored saved provider; ready to check." else "AI disabled · saved settings retained.") }
+        if (store.active.config.enabled && store.active.config.autoConnect) detectModels(store.active.config)
+    }
+    fun detectModels(config: AiConfig) {
+        val epoch = ++catalogEpoch; catalogJob?.cancel(); lastConnectionCheck = SystemClock.elapsedRealtime()
+        mutable.update { it.copy(catalogLoading = true, aiConnection = "Checking provider/model catalog…") }
+        catalogJob = viewModelScope.launch {
+            try {
+                val catalog = ModelDiscovery().fetch(config)
+                if (epoch == catalogEpoch) {
+                    catalogKey = config.apiKey
+                    mutable.update { it.copy(catalog = catalog, aiConnection = "Ready · ${catalog.models.size} models reported. Listing availability is not a generation test.") }
+                }
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                if (epoch == catalogEpoch) mutable.update { it.copy(catalog = null, aiConnection = "Saved/manual settings remain usable. ${e.message?.take(220)}") }
+            } finally { if (epoch == catalogEpoch) mutable.update { it.copy(catalogLoading = false) } }
+        }
+    }
+    fun cancelModelLookup() { catalogEpoch++; catalogJob?.cancel(); mutable.update { it.copy(catalogLoading = false, aiConnection = "Model lookup cancelled. Manual settings retained.") } }
+    private fun runtimeAiConfig(): AiConfig {
+        val state = mutable.value; val c = state.aiConfig
+        val model = state.catalog?.takeIf { it.endpoint == c.endpoint && catalogKey == c.apiKey }?.models?.firstOrNull { it.id == c.model }
+        return c.copy(contextTokens = if (c.manualContext) c.contextTokens else model?.contextTokens ?: c.contextTokens,
+            maxOutputTokens = minOf(c.maxOutputTokens, model?.maxOutputTokens ?: c.maxOutputTokens))
     }
     private fun task(block: suspend () -> Unit) {
         if (mutable.value.busy) return
@@ -167,13 +231,21 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun cancelAi() { if (mutable.value.aiWorking) activeJob?.cancel() }
     fun dismissProposal() { mutable.update { it.copy(pendingAction = null) } }
     fun configureAi(config: AiConfig) = task {
-        app.aiPreferences.save(config)
-        mutable.update { it.copy(aiConfig = config, notice = "Provider settings saved on this device. API keys never enter campaign saves.") }
+        require(mutable.value.aiReady) { "Wait for saved provider settings to load." }
+        installProfiles(app.aiPreferences.save(config))
+        mutable.update { it.copy(notice = "Provider settings saved on this device. API keys never enter campaign saves.") }
     }
     fun testAi(config: AiConfig) = task {
         mutable.update { it.copy(aiWorking = true) }
         val response = CompatibleStoryteller(config).testConnection()
-        mutable.update { it.copy(notice = response) }
+        mutable.update { it.copy(notice = response, aiConnection = "Ready · selected model responded to the explicit test.") }
+    }
+    fun previewKnowledge(config: AiConfig, query: String) = task {
+        require(config.knowledgeEnabled) { "Enable optional web knowledge before sending a query." }
+        require(query.isNotBlank() && query.length <= 200) { "Enter a focused query of up to 200 characters." }
+        mutable.update { it.copy(aiWorking = true, knowledgeWorking = true) }
+        try { val result = knowledge.lookup(config, query); mutable.update { it.copy(knowledgeResult = result) } }
+        finally { mutable.update { it.copy(knowledgeWorking = false) } }
     }
     fun submitAction() = task {
         val active = mutable.value.active ?: error("No campaign is open.")
@@ -188,7 +260,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
         else {
             mutable.update { it.copy(aiWorking = true) }
-            val proposal = CompatibleStoryteller(mutable.value.aiConfig).proposeAction(input, ContextBuilder.build(active.save, input))
+            val proposal = CompatibleStoryteller(runtimeAiConfig()).proposeAction(input, ContextBuilder.build(active.save, input))
             // Unknown wording interpreted by an external provider never silently spends resources,
             // starts combat, joins factions, or chooses dialogue for the player.
             if (!IntentParser.needsReview(input) && proposal.kind in setOf(ActionKind.OBSERVE, ActionKind.INVESTIGATE, ActionKind.ATTEMPT)) resolve(proposal, input)
@@ -226,7 +298,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (!record.accepted) return
         mutable.update { it.copy(aiWorking = true) }
         try {
-            val prose = CompatibleStoryteller(mutable.value.aiConfig).narrate(ContextBuilder.build(active.save, record.input, record.facts, record))
+            val config = runtimeAiConfig()
+            val query = KnowledgeQuery.from(record.input)
+            val refs = if (config.knowledgeEnabled && query.isNotBlank()) {
+                mutable.update { it.copy(knowledgeWorking = true) }
+                try { knowledge.lookup(config, query) } finally { mutable.update { it.copy(knowledgeWorking = false) } }
+            } else KnowledgeResult()
+            mutable.update { it.copy(knowledgeResult = refs, streamingRecordId = id, streamingText = "") }
+            val context = ContextBuilder.build(active.save, record.input, record.facts, record).copy(referenceNotes = refs.references.map { it.context() })
+            val prose = CompatibleStoryteller(config).narrateStreaming(context) { draft ->
+                mutable.update { if (it.streamingRecordId == id) it.copy(streamingText = draft) else it }
+            }
             withContext(NonCancellable) {
                 val changed = active.save.copy(adventure = active.save.adventure!!.copy(history = active.save.adventure!!.history.map { if (it.id == id) it.copy(narration = prose) else it }))
                 val saved = repository.save(changed, active.revision, "Before AI narration")
@@ -234,6 +316,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             }
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { mutable.update { it.copy(aiNotice = "${e.message?.take(300)} Engine results are saved. Retry narration does not replay the action.") } }
+        finally { mutable.update { it.copy(streamingRecordId = null, streamingText = "", knowledgeWorking = false) } }
     }
     fun retryNarration() = task {
         require(mutable.value.aiConfig.enabled) { "Configure and enable an AI provider first." }
