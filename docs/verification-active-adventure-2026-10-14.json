@@ -1,0 +1,70 @@
+{
+  "verified_on": "2026-10-14",
+  "application_version": "0.2.0-active-adventure",
+  "repository": "Stlucifer15t/World-of-Xianxia",
+  "branch": "arena/b0b240be-world-of-xianxia",
+  "code_commit": "ae34852f90fd3e13510b077543c4afd49c6543cd",
+  "run_id": 38643323537,
+  "run_url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38643323537",
+  "conclusion": "success",
+  "unit_tests": {
+    "core": 34,
+    "adventure": 30,
+    "save_codec": 22,
+    "ai_adapter_mock_server": 8,
+    "total": 94,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "emulator_tests": [
+    {
+      "api": 26,
+      "persistence": 16,
+      "compose": 1,
+      "total": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "api": 35,
+      "persistence": 16,
+      "compose": 1,
+      "total": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "lint": {
+    "errors": 0,
+    "other_findings": 14
+  },
+  "save_format": {
+    "exports": 2,
+    "imports": [
+      1,
+      2
+    ],
+    "room_database_schema": 1
+  },
+  "apk_artifact": {
+    "id": 11931333038,
+    "name": "immortal-world-debug-apk",
+    "url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38643323537/artifacts/11931333038",
+    "archive_sha256": "1ff2b983872cf375310e964213699faacfc464ec7e5dfbc3b1f45b1ca52e3c94"
+  },
+  "remaining_manual_acceptance": [
+    "Physical-phone install/SAF/accessibility/rotation",
+    "Live compatible AI provider with user-supplied credentials",
+    "Real-phone Android Keystore profile review"
+  ],
+  "not_implemented": [
+    "Full graphical God Mode/world editor",
+    "Multiple AI provider profiles",
+    "Large procedural worlds and advanced sect management",
+    "Group combat and arbitrary generated mechanics",
+    "Production signing"
+  ]
+}

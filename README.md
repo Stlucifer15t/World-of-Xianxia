@@ -1,138 +1,130 @@
 # Immortal World
 
-A native, offline-first Android xianxia RPG foundation. Kotlin + Jetpack Compose,
-with a provider-independent game core, Room persistence, and portable JSON saves.
+Native Kotlin/Jetpack Compose xianxia RPG with an **active, player-controlled text
+adventure**, an authoritative offline game engine, optional AI narration, and
+portable saves. This extends the tested Phase 1 app rather than replacing it.
 
-**Status: Phase 1 builds successfully and passes automated Android verification.**
-This is not the complete RPG. A debug APK is available from GitHub Actions;
-physical-device, file-picker, and accessibility acceptance checks remain open.
+**Verified build:** 0.2.0 active adventure, code commit `ae34852`.
 
-[Successful build and tests](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38632996109)
-· [Download the tested APK artifact (ZIP)](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38632996109/artifacts/11927596311)
+[Download the tested APK (ZIP)](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38643323537/artifacts/11931333038) · [Successful build and tests](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38643323537)
 
-Extract `app-debug.apk` from the ZIP and install it on an Android 8.0+ device.
-GitHub may require sign-in to download artifacts. Artifacts expire; future builds
-produce new downloads. This is a debug/test build, not a signed production release.
+94 unit tests and 17 device tests on **each** of API 26/API 35 passed. Lint has
+zero errors and 14 non-error findings. Extract `app-debug.apk` from the ZIP.
+GitHub may require sign-in. **Read the save-export warning below before installing.**
 
-## Implemented in this increment
+## Protect your existing save before upgrading
 
-- Native Compose home, new-character flow, journey journal, character inspection,
-  save manager, and preferences. No web wrapper or chatbot stand-in.
-- Editable identity, custom species/backgrounds, appearance, age, personality,
-  starting circumstances/location, difficulty, and spiritual-root selection.
-- Seeded random generation and background presets; eleven attributes, potential,
-  weighted rare traits, cultivation record, talents, starter techniques/items,
-  equipment, currencies, and resources persist as actual data.
-- Independent save slots; continue, manual snapshots, autosave on edits, load,
-  rename, duplicate, delete with confirmation, and five pre-overwrite backups.
-- Human-readable `.xianxia.json` import/export through Android's file picker.
-  Validated imports **always create a new slot**. Failed validation never writes
-  game data. Unsupported fields/versions fail rather than silently losing data.
-- Personal journal entries and character renaming are the state-changing actions
-  available in Phase 1. Journal text does **not** execute gameplay actions.
-- Interfaces, not pretend implementations, for future engine, combat, world
-  generation, and AI storytelling systems.
+**Export your campaign from the old app's Saves screen first.** CI debug APKs can
+have different signing keys. If Android requires uninstalling the old version,
+that deletes private saves. Export first, install the new APK, then import the
+`.xianxia.json`. Version-1 saves migrate without rerolling the player or deleting
+the journal. Do not uninstall without an external save copy.
 
-Not yet implemented: cultivation actions, combat, item use/trading/crafting,
-NPCs, simulation/travel, quests/sects, AI APIs, God Mode editor, sandbox, and
-release signing. Their data/contracts do not constitute working features.
+## Current increment: active adventure (0.2)
 
-## Build an Android APK
+- Persistent action input: type actions, intentions or your own NPC dialogue.
+  Convenience buttons are optional. Drafts survive character/journal inspection.
+- Engine-validated travel, inspection, investigations, finite searches, NPC
+  dialogue/memory, bargaining, trading, quests and sect entry in a small connected
+  world. NPCs and faction resources have scheduled activity and a persistent log.
+- Turn-based NPC duels and guarded-ruins encounters: attacks, techniques, targets,
+  defense, dodge, cover/high ground, items, negotiation and retreat. Hit results,
+  energy, damage, equipment, resistance, injury and RNG are actual game data.
+- Optional Cultivation, Meditation, Technique Practice, Body Training, Alchemy and
+  Crafting: preview outcomes/costs, then simulate 1–24 in-game hours immediately.
+  Breakthroughs require a separate choice. No forced real-time waiting.
+- Optional, explicitly armed real-time activity claims (24-hour cap). Paused,
+  normal and accelerated background schedules never choose player actions.
+- Replaceable OpenAI-compatible provider interface with configurable HTTPS endpoint,
+  model, temperature and encrypted API key. Connection test, cancellation, safe
+  network errors and narration-only retry. Offline play does not require a key.
+- Existing creator, character records, private journal, independent save slots,
+  manual snapshots, backups, duplication and Android file-picker import/export
+  retained. Mechanics and action receipts save before AI narration runs.
+- Portable format **v2**, with **v1 migration** and unchanged Room schema v1.
 
-Requirements: Android Studio Meerkat (or newer compatible IDE), **JDK 17**,
-Android SDK platform **35**, build tools **35.0.0**, and internet access to
-Google Maven, Maven Central, and Gradle's distribution service. Minimum device:
-**Android 8.0 / API 26**.
+This is a bounded first world (four connected locations, three NPCs, two quests,
+one sect and a guarded ruins encounter), **not** the complete master-spec game.
+Large-scale/procedural worlds, advanced sect management, group combat, arbitrary
+mechanical content generation, multiple provider profiles, the graphical God Mode
+editor and production release signing remain future work. The existing explicit
+God Mode save flag remains compatible with the engine; AI cannot enable it.
 
-1. Open the repository root in Android Studio and select JDK 17 for Gradle.
-2. Install Android SDK 35 and accept SDK licenses in SDK Manager.
-3. Let Studio create `local.properties`, or set `ANDROID_HOME` to your SDK path.
-4. Run:
+See [active adventure rules and limitations](docs/ACTIVE_ADVENTURE.md),
+[save format](docs/SAVE_FORMAT.md), and [verification](docs/TESTING.md).
+
+## Start playing
+
+1. Continue or create a campaign. Import an exported old campaign if upgrading.
+2. Try `Ask Mei about Moonfall Ruins`, `Buy herb`, `Accept dewleaf`,
+   `Deliver dewleaf`, or `Travel to Jade River Crossing`.
+3. Investigate the crossing, travel to Silent Pine Mountain, and search for herbs
+   and ore. The map shows adjacent roads and discovered locations.
+4. Use **Cultivation** to preview and simulate an activity, or type
+   `Cultivate for 4 hours`. Your character does not need to idle for real hours.
+5. Challenge a nearby NPC or search the guarded ruins to enter combat. Try
+   `Attack`, `Defend`, `Use Flowing Stream Palm`, `Move to high ground`, or `Retreat`.
+6. For AI, open **Settings**, enter your provider's complete HTTPS
+   **chat/completions** endpoint, model and key, then save and test it. Provider
+   calls may incur charges. No API key is included with the app.
+
+Unknown wording uses AI interpretation when configured, otherwise a bounded
+creative-attempt check. It never creates a promised victory or new power merely
+because the player described one. Consequential AI interpretations are reviewed
+before execution; authoritative engine facts are shown separately from prose.
+
+All adventure actions save immediately, even if private-journal autosave is off.
+This also commits pending journal/name edits. Failed narration does not undo or
+repeat an action. Journal/Notes text is still private and never executes commands.
+
+## Build and test
+
+Requirements: Android Studio Meerkat (or newer compatible IDE), **JDK 17**, Android
+SDK **35**, build tools **35.0.0**, internet access to Gradle/Google Maven/Maven
+Central. Minimum phone version: **Android 8.0 / API 26**.
+
+Open this repository in Android Studio, select JDK 17 for Gradle, install SDK 35
+and accept its licenses. Let Studio create `local.properties`, or set `ANDROID_HOME`.
 
 ```sh
 ./gradlew :core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
-# On Windows, use gradlew.bat instead of ./gradlew.
-```
-
-APK: `app/build/outputs/apk/debug/app-debug.apk` (debug-signed, for testing).
-Install through Android Studio, a downloaded APK on your phone, or:
-
-```sh
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
-
-With a device/emulator connected:
-
-```sh
+# With an emulator or phone connected:
 ./gradlew :app:connectedDebugAndroidTest
 ```
 
-The checked-in [GitHub Actions workflow](.github/workflows/android.yml) builds the
-APK, runs unit tests/lint, and runs instrumentation tests on APIs 26 and 35.
-The workflow has passed for commit `89266cb399c0ccb88fcd776771b3ce05d405794d`.
-For newer builds, download `immortal-world-phase1-debug-apk` from their workflow
-artifacts and verify both emulator jobs, not just the APK build job.
+On Windows use `gradlew.bat`. APK output:
+`app/build/outputs/apk/debug/app-debug.apk`. Install through Android Studio, open
+the APK on your phone, or use `adb install -r` when the signing key matches.
 
-CI debug signing keys may differ between runners/builds. Export your campaigns
-before replacing a debug installation; if Android rejects an update's signature,
-do not uninstall until your saves are exported. Stable release signing is Phase 6.
+[GitHub Actions](.github/workflows/android.yml) builds the APK, runs unit tests and
+lint, and tests on API 26 and API 35 emulators. Download
+`immortal-world-debug-apk` from a successful workflow run; extract the ZIP to obtain
+`app-debug.apk`. Verify both emulator jobs as well as the build. Artifacts expire;
+new runs create new downloads. A debug APK is not a production-signed release.
 
-## Try the foundation
-
-1. **Begin a new life** → edit or randomize → **Begin journey & create save**.
-2. Inspect your cultivation, attributes, techniques, and inventory in **Character**.
-3. Write a journal entry. Autosave is on by default; wait for the saved message.
-4. In **Saves**, create a duplicate, rename a campaign, or export a snapshot.
-5. Import that export: a separate slot is created, even if the file has an existing ID.
-6. Open **Backups** to restore a prior revision. Restoring also backs up the replaced revision.
-7. Turn autosave off in **Settings** to test manual saving and explicit discard.
-
-Save before force-stopping when autosave is disabled. Drafts that have not been
-committed are not guaranteed across process death. Uninstalling clears private
-saves and local backups; export to a document provider to preserve them.
-
-## Verification recorded here
-
-GitHub Actions run [38632996109](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38632996109)
-on **2026-10-14** passed:
-
-- **52 unit tests:** 34 core checks and 18 portable-save codec tests.
-- **15 instrumentation tests on API 26**, and the same **15 on API 35**:
-  14 Room/persistence tests and one Compose creation/journal/status flow per device.
-- **Android compilation and debug APK generation.**
-- **Android lint:** zero errors; 14 non-error findings remain.
-- Real KSP-generated Room schema v1 was retrieved, reviewed, and checked in.
-
-An earlier API 35 UI test failed because it attempted to use the creator before
-confirming navigation. The test now scrolls the home button into view and waits
-for screen transitions and async operations; assertions were not removed.
-
-The local sandbox still cannot download Gradle/Google SDKs or direct workflow
-log/artifact storage. **That is no longer a build blocker:** GitHub-hosted runners
-perform the builds, and bounded diagnostics are available through the Checks API.
-Physical-device/file-picker/accessibility checks are still pending; see
-[testing evidence and remaining acceptance checks](docs/TESTING.md).
-
-Core checks can also run without Android or Gradle, with Java 17 and Kotlin 2.1.20
-on PATH:
+A local Android download restriction is not a blocker: GitHub runners perform the
+build and publish bounded diagnostics through the Checks API, plus full reports
+and APK artifacts. Core tests can also run locally with Kotlin 2.1.20 / Java 17:
 
 ```sh
 ./scripts/check-core.sh
 ```
 
-## Project layout
+## Architecture
 
 ```text
-core/         Immutable engine models, seeded generation, validation, future ports
-app/          Compose UI, ViewModel orchestration, Room, DataStore, JSON & SAF
-  src/test/             Portable-save unit tests
-  src/androidTest/      Database/recovery and Compose flow tests
-scripts/      Dependency-free core test runner
-docs/         Architecture, save contract, roadmap, acceptance checklist
+core/    Character generation, immutable state, validation, action interpreter,
+         engine/combat/activity/world rules, bounded AI context and provider port
+app/     Existing Compose shell and ViewModel, Room repository, DataStore,
+         v1/v2 codec, Android file picker, compatible AI adapter and Keystore
+scripts/ Dependency-free core checks and bounded CI diagnostics
+docs/    Rules, save contract, architecture, phase gates and test evidence
 ```
 
-Read [architecture](docs/ARCHITECTURE.md), [save format](docs/SAVE_FORMAT.md),
-[phase gates](docs/ROADMAP.md), and [device acceptance tests](docs/TESTING.md).
-
-No API keys, network permission, external storage permission, telemetry, or AI
-provider dependency are included in this phase.
+Tests cover deterministic outcomes, resource bounds, agency/command restrictions,
+world schedules, active NPC consistency, idempotent receipts, old-save migration,
+combat/memory persistence, malformed/rate-limited/failed/cancelled AI requests,
+and the actual Android create → text action → journal → inspect → draft flow.
+Live paid-provider behavior and physical-device/file-picker/accessibility checks
+remain separately identified; mock-server tests are not represented as live-model
+verification. Network permission is used only for explicitly enabled/tested AI.

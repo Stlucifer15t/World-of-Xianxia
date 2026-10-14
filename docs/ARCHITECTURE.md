@@ -1,5 +1,35 @@
 # Architecture and authority boundaries
 
+## Active-adventure extension (0.2)
+
+The Phase 1 storage/shell described below is retained. `AdventureEngine` now
+implements `GameEngine`, using the original character models, generator, RNG and
+validator. Combat, activities, NPC schedules and receipts are data in the same
+campaign aggregate, not a separate game or parallel persistence system.
+
+`GameSave` portable version 2 adds nullable `AdventureState`; legacy initialization
+uses the existing backed-up repository write. SQL schema v1 is unchanged. The
+ViewModel commits engine results and receipt IDs in a non-cancellable transaction
+boundary before optional AI narration. Rejections produce receipts but do not
+advance RNG/time or spend resources. Narration retries cannot replay mechanics.
+
+`CompatibleStoryteller` implements the original `Storyteller` port using a bounded,
+cancellable OpenAI-compatible request. It receives only `NarrativeContext`, never
+Room, a complete save or a mutator. Local ordinary commands do not need AI. Unknown
+wording can request an allowlisted proposal; consequential proposals require player
+review. Provider output cannot set stats, time settings or God Mode. Keys are
+AES-GCM encrypted with Android Keystore in a separate provider DataStore.
+
+NPCs are generated once through the shared generator and persisted. The new world
+is a small authored topology with generated character variation, not the full
+procedural-world system. Background schedules skip active duel participants and
+remember duel endings. Activity claims are explicitly armed and explicitly claimed;
+there is no background worker or forced real-time gate.
+
+See `ACTIVE_ADVENTURE.md` for the exact current mechanics and limitations. The
+remaining sections document the original foundation decisions; statements about
+future systems are historical Phase 1 scope, superseded by this section.
+
 ## Scope and current decisions
 
 This repository originally contained only a README. Phase 1 creates a native

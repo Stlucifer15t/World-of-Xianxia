@@ -1,4 +1,57 @@
-# Phase 1 verification and device acceptance
+# Immortal World verification and device acceptance
+
+## Current active-adventure build — 2026-10-14
+
+[Run 38643323537](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38643323537) completed successfully for code commit
+`ae34852f90fd3e13510b077543c4afd49c6543cd`. The APK is
+[available as a workflow artifact](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38643323537/artifacts/11931333038).
+
+| Check | Actual result |
+|---|---|
+| Android build / debug APK | Passed, uploaded |
+| Core foundation checks | 34 passed |
+| Adventure engine / interpreter / context checks | 30 passed |
+| Save codec / version-1 migration / encounter round-trip | 22 passed |
+| Compatible-provider and failure/cancellation tests | 8 passed (mock server) |
+| Total unit tests | **94 passed; 0 failures/errors/skips** |
+| API 26 device tests | **17 passed; 0 failures/errors/skips** |
+| API 35 device tests | **17 passed; 0 failures/errors/skips** |
+| Android lint | 0 errors; 14 non-error findings |
+| Live paid-provider/model invocation | Not tested; no real credentials supplied |
+| Updated APK on a physical phone / SAF / accessibility | Still manual acceptance |
+
+Each device suite runs 16 Room/persistence cases plus a Compose end-to-end flow.
+The new device cases preserve an old v1 backup while initializing v2 gameplay, and
+close/reopen a campaign during combat with NPC memories and deterministic replay.
+The UI flow creates a character, types and submits an actual cultivation action,
+verifies elapsed world time, saves a journal entry, inspects the character and
+returns to an unfinished action draft without losing it.
+
+The core suite covers travel validation, actual stock/currency transfer, NPC memory,
+one-time quests, faction requirements, activity estimate equality and costs,
+explicit breakthroughs, deterministic combat, energy/technique checks, defense/
+dodge/movement/retreat, paused/normal/accelerated schedules, active-duel NPC location
+consistency, remembered duel endings, opt-in bounded/non-repeatable offline claims,
+idempotent action IDs, rejection atomicity, bounded history, and no state grants
+from creative prose. Context tests exclude hidden traits/private journals.
+
+Provider tests use MockWebServer to exercise valid requests, authorization headers,
+malformed and oversized responses, unsupported action/state patches, HTTP 401/403/
+404/429/500, socket failure, cancellation without retry, unsupported narration
+numbers/player-decision phrases, and rejected unsafe endpoint configuration. These
+are real adapter tests, **not** claims of verification against a live model.
+
+The initial new build (`38640854904`) passed 90 unit tests and all API 26 tests,
+but its API 35 UI test timed out after tapping Submit with the keyboard active.
+The fix sets explicit resize behavior, consumes Scaffold insets correctly, compacts
+the composer/header while the keyboard is visible, hides the bottom navigation
+while typing, and clears focus on submission. The same touch-based submission
+assertions now pass on both APIs; tests were not disabled. Run `38642128165` passed
+92 unit tests and both device jobs. The final two NPC consistency regressions are
+included in the verified 94-test run above.
+
+Machine-readable evidence: `verification-active-adventure-2026-10-14.json`.
+Previous Phase 1 evidence is retained below rather than overwritten.
 
 ## Verified on GitHub Actions — 2026-10-14
 
@@ -69,6 +122,27 @@ complete RPG. The remaining manual checks are below.
   isolation, failed writes/imports, optimistic concurrency, retention/restore,
   corrupted payload recovery, metadata consistency, cascading/stale deletion.
 - Compose: actual character creation, autosaved journal entry, character inspection.
+
+## Additional active-adventure manual checks
+
+Before installing, export an old `.xianxia.json` on the phone. If the new debug APK
+has a different signing key, only uninstall after confirming that external backup.
+Import in 0.2 and verify character/journal values and independent slot identity.
+
+- Type and submit with the keyboard open in portrait, landscape and large-font mode.
+  Inspect every destination and return to the same unfinished action draft.
+- Try a quest/trade/travel/ruins encounter; kill and relaunch the app mid-encounter.
+  Confirm HP, energy, enemy, RNG-derived continuation, stock and memories persist.
+- Compare activity estimates to costs/results, capped progression, explicit
+  breakthroughs, background modes, and real-time claim cap/checkpoint behavior.
+- Configure your own HTTPS-compatible provider in Settings (do not put keys in
+  chat). Test a real request, disable connectivity, cancel a request and retry
+  narration. Confirm no action, purchase or combat turn executes twice.
+- Inspect provider prose versus engine facts. Report contradictions; prose must
+  never be treated as a stat change or an NPC promise not recorded by the engine.
+- Repeat actual system-file-picker export/import and backup restore on the phone.
+  Keystore storage, accessibility and real-provider integration need device review
+  beyond these emulator/mock-server suites.
 
 ## Manual Android acceptance checklist
 

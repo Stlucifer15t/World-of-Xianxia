@@ -3,6 +3,19 @@
 The full Immortal World specification is the direction, not a statement of current
 completion. Do not ship buttons for systems whose mechanics do not exist.
 
+## Added prerequisite — active player-controlled gameplay (0.2)
+
+The new user-directed adventure model is implemented before continuing the wider
+roadmap. It reuses all Phase 1 foundations and brings forward a bounded subset of
+Phases 2–4: free-text action receipts, a provider adapter, single-opponent combat,
+optional instant/claimed activities, a small persistent world, NPC memories/trade,
+quests, faction entry and scheduled simulation.
+
+This is not a claim that the full later phases are complete. In particular, full
+procedural generation, advanced factions/sects/combat, arbitrary content creation,
+multiple AI profiles and the graphical God Mode editor remain outstanding. See
+`ACTIVE_ADVENTURE.md` for implemented behavior and `TESTING.md` for current evidence.
+
 ## Phase 1 — foundation (automated verification passed; manual acceptance open)
 
 Native application shell; character creation and generation; complete initial
