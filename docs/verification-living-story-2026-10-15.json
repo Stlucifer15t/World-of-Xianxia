@@ -1,0 +1,84 @@
+{
+  "verified_on": "2026-10-15",
+  "application_version": "0.3.0-living-story",
+  "repository": "Stlucifer15t/World-of-Xianxia",
+  "branch": "arena/b0b240be-world-of-xianxia",
+  "code_commit": "eb0bd5dde2903e23e855f7e4641932e5886f985e",
+  "run_id": 38650787173,
+  "run_url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38650787173",
+  "conclusion": "success",
+  "unit_tests": {
+    "core": 34,
+    "adventure": 30,
+    "story": 15,
+    "save_codec": 27,
+    "ai_adapter_mock_server": 10,
+    "total": 116,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "emulator_tests": [
+    {
+      "api": 26,
+      "persistence": 17,
+      "compose": 2,
+      "total": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "api": 35,
+      "persistence": 17,
+      "compose": 2,
+      "total": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "lint": {
+    "errors": 0,
+    "other_findings": 14
+  },
+  "save_format": {
+    "exports": 3,
+    "imports": [
+      1,
+      2,
+      3
+    ],
+    "room_database_schema": 1,
+    "room_schema_file_sha256": "8a2fa3d84ff99a951ce4ddffebe55999562ab93dcf2312a6db3483999da45d2c"
+  },
+  "apk_artifact": {
+    "id": 11934273712,
+    "name": "immortal-world-debug-apk",
+    "url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38650787173/artifacts/11934273712",
+    "size_in_bytes": 11624221,
+    "archive_sha256": "f09f70bcc51cdb2ddae6afbdb72cd771e9b325e72be3b9599fd8db1ab7052af7"
+  },
+  "verified_additions": [
+    "State-grounded scenes, no rendering RNG consumption",
+    "Historical snapshots and absence of private goals/unspoken knowledge from narrator context",
+    "Seeded spiritual sense, real recruitment notice, seated practice interpretation",
+    "V1/V2 migration, v2 raw backup recovery, custom descriptions, bounded story round trips",
+    "Adaptive narrator prompts and budgets tested with MockWebServer",
+    "Native menu, dialogue, notice, travel, drafts and recent events on API26/API35",
+    "320dp viewport at 130% text scaling with keyboard and long draft",
+    "Conditional offline request leaves time and draft unchanged"
+  ],
+  "remaining_manual_acceptance": [
+    "Physical-phone install, SAF providers, rotation, TalkBack and larger accessibility fonts",
+    "Live compatible AI provider with user-supplied credentials",
+    "Real-phone Android Keystore profile review"
+  ],
+  "not_implemented": [
+    "Full graphical God Mode/world editor",
+    "Multiple AI provider profiles",
+    "Large procedural worlds and autonomous NPC plots",
+    "Advanced sect management, group combat and arbitrary generated mechanics",
+    "Production signing"
+  ]
+}

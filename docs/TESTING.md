@@ -1,6 +1,55 @@
 # Immortal World verification and device acceptance
 
-## Current active-adventure build — 2026-10-14
+## Current living-story build — 2026-10-15
+
+[Run 38650787173](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38650787173) completed successfully for code commit
+`eb0bd5dde2903e23e855f7e4641932e5886f985e`. [Download the tested APK artifact](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38650787173/artifacts/11934273712).
+
+| Check | Actual result |
+|---|---|
+| Android compilation / debug APK | Passed, uploaded |
+| Core foundation | 34 passed |
+| Retained adventure mechanics | 30 passed |
+| Grounded scenes / dialogue / context / interpretation | 15 passed |
+| Save codec / v1-v2 migrations / story bounds | 27 passed |
+| Compatible provider / pacing / failure recovery | 10 passed, mock server |
+| Total unit tests | **116 passed; 0 failures/errors/skips** |
+| API 26 device tests | **19 passed; 0 failures/errors/skips** |
+| API 35 device tests | **19 passed; 0 failures/errors/skips** |
+| Android lint | 0 errors; 14 non-error findings |
+| Room schema | v1, unchanged |
+
+Each device suite has 17 disk-backed persistence tests and two Compose flows. The
+expanded creation flow submits cultivation and dialogue, reads the actual notice,
+opens/closes surroundings and recent events, navigates the map, travels, and checks
+that drafts survive navigation. A separate **320dp-wide, 130%-font** composition
+exercises the actual keyboard/Submit control, a long draft, inventory navigation,
+and a conditional offline request that must leave time and the draft unchanged.
+V2 upgrade/reopen/backup restore is tested on both Android JSON implementations.
+
+The story suite covers observed NPC presence, exhausted stock, patrols/supplies,
+duel continuity, defeated guardians, deterministic cosmetic weather without RNG
+mutation, arrivals/revisits, historical snapshots, custom text, private-context
+exclusion, authoritative NPC speech, notice gates, seeded spiritual sense and
+short-line consolidation. The mock provider suite checks scene/ordinary token
+budgets and grounded narrator instructions alongside retained network safety tests.
+
+Intermediate runs `38649025037` (116 units, 17 device tests per API) and
+`38649853198` (116 units, 19 per API) passed. Final review additionally closed the
+conditional-command offline fallback so an unparsed prohibition cannot silently
+spend a generic attempt turn. The final run above includes its UI regression.
+
+Local verification ran 34 foundation + 30 adventure + 15 story checks and
+save-codec type checking. Android builds and instrumentation ran on GitHub Actions
+because local Android dependency hosts are blocked. No tests were disabled.
+Machine-readable evidence: `verification-living-story-2026-10-15.json`.
+
+**Not claimed:** physical-phone visual/SAF/rotation/TalkBack certification, arbitrary
+accessibility scaling beyond the tested viewport, or live paid-provider/model
+behavior. NPC crowds/weather are bounded presentation rules, not verification of
+a new autonomous population simulator. Retained earlier build evidence follows.
+
+## Previously verified active-adventure build — 2026-10-14
 
 [Run 38643323537](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38643323537) completed successfully for code commit
 `ae34852f90fd3e13510b077543c4afd49c6543cd`. The APK is
@@ -121,13 +170,25 @@ complete RPG. The remaining manual checks are below.
 - Room: close/reopen from a disk database, independent slots, duplicate/import
   isolation, failed writes/imports, optimistic concurrency, retention/restore,
   corrupted payload recovery, metadata consistency, cascading/stale deletion.
-- Compose: actual character creation, autosaved journal entry, character inspection.
+- Compose: creation, journal, character/draft continuity, dialogue, notice, travel,
+  menu/recent events and 320dp/130%-font keyboard/conditional-action checks.
+
+## Additional story-first manual checks
+
+- Read the initial scene, travel/return, advance into night, deplete Mei's herbs and
+  revisit the defeated guardian's courtyard. Descriptions must match actual state.
+- Open Current surroundings and Recent events while reading an older receipt;
+  close the sheet and confirm your place/draft remain. Expand facts/calculations.
+- Compare raw NPC speech against optional AI prose. Check no added player dialogue,
+  NPC consent, hidden knowledge, forced next action or unearned reward is presented.
+- Repeat 320dp-like narrow phone layouts and larger font sizes, with your physical
+  keyboard/IME. The automated 130% regression is not a blanket accessibility claim.
 
 ## Additional active-adventure manual checks
 
 Before installing, export an old `.xianxia.json` on the phone. If the new debug APK
 has a different signing key, only uninstall after confirming that external backup.
-Import in 0.2 and verify character/journal values and independent slot identity.
+Import in 0.3 and verify character/journal/adventure values and independent slot identity.
 
 - Type and submit with the keyboard open in portrait, landscape and large-font mode.
   Inspect every destination and return to the same unfinished action draft.
@@ -177,7 +238,8 @@ at least API 26 and 35, portrait/landscape, large font, and a narrow phone.
     unsaved edits with autosave off are explicitly not guaranteed.
 11. **Accessibility**: TalkBack labels, large fonts, text wrapping, keyboard visibility,
     scrolling dialogs, touch targets, no cut-off actions at minimum supported sizes.
-12. **Scope**: no button implies playable cultivation/combat/AI/God Mode editing in
-    Phase 1. An imported God Mode flag must show the explicit banner.
+12. **Scope**: implemented adventure actions must work. No control should imply
+    a completed graphical God Mode editor, autonomous NPC plots or unrestricted
+    generated mechanics. An imported God Mode flag must show the explicit banner.
 
-Do not declare Phase 1 complete until these gates pass and an APK is installed.
+Automated build success does not replace these physical-device acceptance checks.
