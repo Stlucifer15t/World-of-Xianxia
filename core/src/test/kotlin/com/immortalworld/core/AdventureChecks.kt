@@ -24,6 +24,19 @@ object AdventureChecks {
             check(IntentParser.parse(sample(), "cultivate for 3 hours")!!.hours == 3)
             check(IntentParser.parse(sample(), "I magically become an immortal emperor") == null)
         },
+        "named inspection returns real item and technique properties" to {
+            val s = sample(); val item = s.player.inventory.first()
+            val command = IntentParser.parse(s, "Inspect ${item.name}")!!
+            val result = engine.apply(s, command)
+            check(result.facts.single().contains("power ${item.power}") && result.state.player == s.player)
+            check(IntentParser.parse(s, "Ask Elder Wen what he knows about Mei")!!.target == "wen")
+        },
+        "breakthrough preview uses the actual chance and respects difficulty" to {
+            val s = sample()
+            check(AdventureEngine.breakthroughChance(s) in 5..95)
+            check(AdventureEngine.breakthroughChance(s.copy(rules = s.rules.copy(breakthroughDifficulty = 2.0))) < AdventureEngine.breakthroughChance(s))
+            check(AdventureEngine.breakthroughChance(s.copy(rules = s.rules.copy(godMode = true))) == 100)
+        },
         "travel validates roads and discovers locations only through rules" to {
             val s = sample(); rejects { act(s, ActionKind.TRAVEL, "ruins") }; rejects { act(s, ActionKind.TRAVEL, "missing") }
             val moved = act(s, ActionKind.TRAVEL, "crossing"); check(moved.world.currentLocation == "Jade River Crossing" && moved.adventure!!.hour == 10)

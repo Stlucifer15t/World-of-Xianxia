@@ -27,7 +27,7 @@ object IntentParser {
                 val dest = a.locations.firstOrNull { t.contains(it.name.lowercase()) || Regex("\\b${Regex.escape(it.id)}\\b").containsMatchIn(t) } ?: return null
                 GameAction(ActionKind.TRAVEL, dest.id)
             }
-            starts("look", "observe", "inspect", "status") -> GameAction(ActionKind.OBSERVE)
+            starts("look", "observe", "inspect", "status") -> GameAction(ActionKind.OBSERVE, item?.id ?: technique?.id ?: npc?.character?.id ?: if (starts("status") || "myself" in t) "self" else "")
             starts("investigate", "examine", "survey") -> GameAction(ActionKind.INVESTIGATE)
             starts("search", "gather", "forage", "explore") -> GameAction(ActionKind.SEARCH)
             starts("defend", "block", "guard") -> GameAction(ActionKind.DEFEND)
@@ -63,7 +63,7 @@ object ContextBuilder {
             scene = a.locations.first { it.id == a.locationId }.description + "\n" + local.joinToString("\n") { n ->
                 "NPC id=${n.character.id}; ${n.character.name}; personality=${n.character.personality}; opinion=${n.relationship}; goal=${n.goal}; knowledge=${n.knowledge.joinToString("; ")}" },
             input = input.take(2000), availableTargets = a.locations.filter { it.discovered }.map { "location ${it.id}: ${it.name}" } +
-                local.map { "npc ${it.character.id}: ${it.character.name}" } + s.player.techniques.take(10).map { "technique ${it.id}: ${it.name}" } +
+                local.map { "npc ${it.character.id}: ${it.character.name}" } + listOfNotNull(a.combat?.let { "opponent ${it.enemy.id}: ${it.enemy.name}, health ${it.enemy.health}; position=${it.position}" }) + s.player.techniques.take(10).map { "technique ${it.id}: ${it.name}" } +
                 s.player.inventory.take(12).map { "item ${it.id}: ${it.name} x${it.quantity}" } + a.quests.map { "quest ${it.id}: ${it.name} (${it.status})" } + listOf("faction azure: Azure Cloud Sect"),
             playerSummary = "${s.player.race}; realm=${s.player.cultivation.realmId} stage=${s.player.cultivation.substage}; HP=${s.player.health}/${s.player.maxHealth}; energy=${s.player.energy}; day=${s.world.day}, hour=${a.hour}; encounter=${a.combat?.enemy?.name ?: "none"}.")
     }

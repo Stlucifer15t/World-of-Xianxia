@@ -12,7 +12,11 @@ import org.junit.runner.RunWith
 class CreationFlowTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
     private fun awaitNode(matcher: SemanticsMatcher) {
-        compose.waitUntil(10_000) { compose.onAllNodes(matcher).fetchSemanticsNodes().size == 1 }
+        try {
+            compose.waitUntil(10_000) { compose.onAllNodes(matcher).fetchSemanticsNodes().size == 1 }
+        } catch (failure: Throwable) {
+            throw AssertionError("Awaited $matcher. UI tree: " + compose.onRoot(useUnmergedTree = true).printToString(), failure)
+        }
     }
     private fun awaitOperation() {
         compose.waitUntil(10_000) { compose.onAllNodesWithTag("operation_in_progress").fetchSemanticsNodes().isEmpty() }
@@ -31,9 +35,10 @@ class CreationFlowTest {
         awaitNode(hasTestTag("adventure"))
         awaitOperation()
         compose.onNodeWithTag("action_input").performTextInput("Cultivate for 1 hour")
-        compose.onNodeWithText("Submit action").performClick()
+        compose.onNodeWithText("Submit action").assertIsDisplayed().performClick()
         awaitNode(hasText("Day 1 · 09:00", substring = true))
         awaitOperation()
+        compose.onNodeWithTag("action_input").performTextInput("Ask Mei about Moonfall Ruins")
         compose.onNodeWithText("Notes").performClick()
         awaitNode(hasTestTag("journal"))
         compose.onNodeWithTag("journal").performScrollToNode(hasText("Plans, promises, and reflections"))
@@ -48,5 +53,8 @@ class CreationFlowTest {
         awaitNode(hasText("CHARACTER RECORD"))
         compose.onNodeWithText("CHARACTER RECORD").assertIsDisplayed()
         compose.onNodeWithText("Test Cultivator").assertIsDisplayed()
+        compose.onNodeWithTag("nav_journey").performClick()
+        awaitNode(hasTestTag("adventure"))
+        compose.onNodeWithTag("action_input").assertTextContains("Ask Mei about Moonfall Ruins")
     }
 }

@@ -6,12 +6,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.immortalworld.ai.AiConfig
@@ -23,13 +27,16 @@ internal fun AdventureScreen(state: GameUiState, model: GameViewModel) {
     val save = state.active?.save ?: return
     val a = save.adventure ?: return
     val p = save.player
+    val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    val focus = LocalFocusManager.current
+    val submit = { focus.clearFocus(); model.submitAction() }
     Column(Modifier.fillMaxSize().testTag("adventure")) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-            Text(save.world.currentLocation, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.secondary)
+            if (!keyboardVisible) Text(save.world.currentLocation, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.secondary)
             Text("Day ${save.world.day} · ${a.hour.toString().padStart(2, '0')}:00 · HP ${p.health}/${p.maxHealth} · Qi ${p.energy}/${p.maxEnergy}", style = MaterialTheme.typography.bodySmall)
-            Text("${save.realms.first { it.id == p.cultivation.realmId }.name} ${p.cultivation.substage} · ${p.cultivation.progress.toInt()}% · ${p.spiritStones} stones", style = MaterialTheme.typography.bodySmall)
+            if (!keyboardVisible) Text("${save.realms.first { it.id == p.cultivation.realmId }.name} ${p.cultivation.substage} · ${p.cultivation.progress.toInt()}% · ${p.spiritStones} stones", style = MaterialTheme.typography.bodySmall)
         }
-        LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (!keyboardVisible) LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             items(listOf(Screen.STATUS to "Character", Screen.CULTIVATION to "Cultivation", Screen.INVENTORY to "Inventory", Screen.TECHNIQUES to "Techniques", Screen.QUESTS to "Quests", Screen.MAP to "Map", Screen.NPCS to "NPCs", Screen.EVENTS to "Events", Screen.JOURNAL to "Journal")) { (screen, name) ->
                 SuggestionChip(onClick = { model.navigate(screen) }, label = { Text(name) })
             }
@@ -71,9 +78,11 @@ internal fun AdventureScreen(state: GameUiState, model: GameViewModel) {
         Surface(color = MaterialTheme.colorScheme.surface) {
             Column(Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
                 OutlinedTextField(state.actionDraft, model::actionDraft, label = { Text("What do you do or say?") },
-                    placeholder = { Text("Describe your action, dialogue, or intention…") }, minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth().testTag("action_input"))
+                    placeholder = { Text("Describe your action, dialogue, or intention…") }, minLines = if (keyboardVisible) 1 else 2, maxLines = 3,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { if (!state.busy && state.actionDraft.isNotBlank()) submit() }),
+                    modifier = Modifier.fillMaxWidth().testTag("action_input"))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = model::submitAction, enabled = !state.busy && state.actionDraft.isNotBlank(), modifier = Modifier.weight(1f)) { Text("Submit action") }
+                    Button(onClick = submit, enabled = !state.busy && state.actionDraft.isNotBlank(), modifier = Modifier.weight(1f)) { Text("Submit action") }
                     if (state.aiConfig.enabled) TextButton(onClick = model::attemptOffline, enabled = !state.busy && state.actionDraft.isNotBlank()) { Text("Attempt offline") }
                     TextButton(onClick = { model.navigate(Screen.JOURNAL) }) { Text("Notes") }
                 }
@@ -108,6 +117,7 @@ internal fun CultivationScreen(state: GameUiState, model: GameViewModel) {
             } else Text("Enter a duration from 1 to 24 hours.")
             Text("Available: ${save.player.inventory.filter { it.kind == "herb" }.sumOf { it.quantity }} herbs, ${save.player.inventory.filter { it.kind == "material" }.sumOf { it.quantity }} ore, ${save.player.spiritStones} stones. Energy ${save.player.energy}.")
             Button(onClick = { model.command(action, "$activity for ${action.hours} hours using $method${if (herbs) " with herbs" else ""}") }, enabled = !state.busy && estimate != null && a.combat == null) { Text("Simulate now") }
+            Text("Breakthrough preview: ${AdventureEngine.breakthroughChance(save)}% chance; ${if (save.rules.godMode) 0 else 10 * (save.realms.indexOfFirst { it.id == save.player.cultivation.realmId } + 1)} stones. Failure leaves 75% progress, adds injury, and costs health. Success is never automatic.", style = MaterialTheme.typography.bodySmall)
             OutlinedButton(onClick = { model.command(GameAction(ActionKind.BREAKTHROUGH), "Attempt a breakthrough") }, enabled = !state.busy && a.combat == null) { Text("Attempt breakthrough · 100% required") }
         } }
         item { Panel {

@@ -167,10 +167,22 @@ class AdventureEngine(private val clock: () -> Long = System::currentTimeMillis)
             a = a.copy(combat = combat); elapsed = 1
         } else when (action.kind) {
             ActionKind.OBSERVE -> {
-                val loc = a.locations.first { it.id == a.locationId }
-                fact("${loc.name}: ${loc.description}")
-                fact("Nearby: ${a.npcs.filter { it.locationId == a.locationId }.joinToString { it.character.name }.ifEmpty { "no known NPCs" }}.")
-                a.combat?.let { fact("${it.enemy.name}: ${it.enemy.health}/${it.enemy.maxHealth} health. Turn ${it.turn}, position ${it.position}.") }
+                val item = p.inventory.firstOrNull { it.id == action.target }
+                val technique = p.techniques.firstOrNull { it.id == action.target }
+                val character = a.npcs.firstOrNull { it.character.id == action.target && it.locationId == a.locationId }?.character
+                when {
+                    item != null -> fact("${item.name}: ${item.description} Rank ${item.rank}; kind ${item.kind}; quantity ${item.quantity}; power ${item.power}; slot ${item.equippedSlot ?: "unequipped"}.")
+                    technique != null -> fact("${technique.name}: ${technique.description} Effect ${technique.effect}; power ${technique.power}; energy cost ${technique.energyCost}; mastery ${technique.mastery}%; realm requirement ${technique.requiredRealmId}.")
+                    character != null -> fact("${character.name}: ${character.appearance} ${character.personality}; realm ${character.cultivation.realmId}, stage ${character.cultivation.substage}; health ${character.health}/${character.maxHealth}.")
+                    action.target == "self" -> fact("${p.name}: realm ${p.cultivation.realmId}, stage ${p.cultivation.substage}; progress ${p.cultivation.progress}%; health ${p.health}/${p.maxHealth}; energy ${p.energy}/${p.maxEnergy}; ${p.spiritStones} stones.")
+                    else -> {
+                        require(action.target.isBlank() || action.target == a.locationId) { "That target is not available to inspect here." }
+                        val loc = a.locations.first { it.id == a.locationId }
+                        fact("${loc.name}: ${loc.description}")
+                        fact("Nearby: ${a.npcs.filter { it.locationId == a.locationId }.joinToString { it.character.name }.ifEmpty { "no known NPCs" }}.")
+                        a.combat?.let { fact("${it.enemy.name}: ${it.enemy.health}/${it.enemy.maxHealth} health. Turn ${it.turn}, position ${it.position}.") }
+                    }
+                }
             }
             ActionKind.TRAVEL -> {
                 val dest = a.locations.firstOrNull { it.id == action.target } ?: throw IllegalArgumentException("Unknown destination. Inspect the map for valid locations.")
@@ -282,7 +294,7 @@ class AdventureEngine(private val clock: () -> Long = System::currentTimeMillis)
                 val ascension = p.cultivation.substage == s.realms[realm].stages
                 require(!ascension || realm < s.realms.lastIndex) { "No higher realm is defined in this campaign." }
                 stones(10 * (realm + 1))
-                val chance = if (s.rules.godMode) 100 else ((65 + p.attributes.talent / 4 + p.attributes.comprehension / 8 - if (ascension && !s.rules.skipTribulations) 15 else 0) / s.rules.breakthroughDifficulty).toInt().coerceIn(5, 95)
+                val chance = breakthroughChance(s.copy(player = p))
                 val roll = rng.nextInt(100); calculations += "Breakthrough roll $roll; success below $chance. Cost ${10 * (realm + 1)} stones; sandbox=${s.rules.godMode}."
                 if (roll < chance) {
                     val next = s.realms[if (ascension) realm + 1 else realm]
@@ -340,6 +352,12 @@ class AdventureEngine(private val clock: () -> Long = System::currentTimeMillis)
     }
 
     companion object {
+        fun breakthroughChance(s: GameSave): Int {
+            if (s.rules.godMode) return 100
+            val p = s.player
+            val ascension = p.cultivation.substage == s.realms.first { it.id == p.cultivation.realmId }.stages
+            return ((65 + p.attributes.talent / 4 + p.attributes.comprehension / 8 - if (ascension && !s.rules.skipTribulations) 15 else 0) / s.rules.breakthroughDifficulty).toInt().coerceIn(5, 95)
+        }
         fun neighbors(id: String): List<String> = when (id) {
             "village" -> listOf("crossing", "origin"); "crossing" -> listOf("village", "mountain")
             "mountain" -> listOf("crossing", "ruins"); "ruins" -> listOf("mountain"); else -> listOf("village")

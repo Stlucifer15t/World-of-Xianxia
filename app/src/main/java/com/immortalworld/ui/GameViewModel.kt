@@ -212,7 +212,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         // Mechanics and receipt commit before narration. Cancellation cannot split this pair.
         withContext(NonCancellable) {
             val saved = repository.save(result.state, active.revision, "Before player action")
-            mutable.update { it.copy(active = saved, dirty = false, actionDraft = "", pendingAction = null, aiNotice = null) }
+            mutable.update { it.copy(active = saved, dirty = false, actionDraft = if (it.actionDraft.trim() == input) "" else it.actionDraft, pendingAction = null, aiNotice = null) }
         }
         if (narrate && mutable.value.aiConfig.enabled) narrateRecord(id)
     }

@@ -22,6 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -70,7 +72,7 @@ fun ImmortalWorldApp(model: GameViewModel) {
                 )
             },
             bottomBar = {
-                if (state.active != null && state.screen !in listOf(Screen.HOME, Screen.CREATE, Screen.SETTINGS)) {
+                if (state.active != null && state.screen !in listOf(Screen.HOME, Screen.CREATE, Screen.SETTINGS) && WindowInsets.ime.getBottom(LocalDensity.current) == 0) {
                     NavigationBar(containerColor = Ink) {
                         listOf(Triple(Screen.JOURNEY, "Journey", "◇"), Triple(Screen.STATUS, "Character", "△"), Triple(Screen.SAVES, "Saves", "▤")).forEach { (screen, label, symbol) ->
                             NavigationBarItem(modifier = Modifier.testTag("nav_${screen.name.lowercase()}"), selected = state.screen == screen, onClick = { model.navigate(screen) },
@@ -80,7 +82,7 @@ fun ImmortalWorldApp(model: GameViewModel) {
                 }
             },
         ) { padding ->
-            Box(Modifier.fillMaxSize().padding(padding).imePadding()) {
+            Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding()) {
                 Column(Modifier.fillMaxSize()) {
                     if (state.dirty) {
                         Surface(color = Color(0xFF4F3B1D), modifier = Modifier.fillMaxWidth()) {
@@ -252,6 +254,7 @@ private fun Creator(state: GameUiState, model: GameViewModel) {
 
 @Composable
 private fun Journal(state: GameUiState, model: GameViewModel) {
+    val focus = LocalFocusManager.current
     val s = state.active?.save ?: return
     var note by rememberSaveable(s.id) { mutableStateOf("") }
     var discard by remember { mutableStateOf(false) }
@@ -263,9 +266,9 @@ private fun Journal(state: GameUiState, model: GameViewModel) {
                 Text(s.world.startingCircumstances, fontFamily = FontFamily.Serif, style = MaterialTheme.typography.titleLarge)
                 Text("This is your personal chronicle, not an AI chat. Journal entries do not change your stats or advance world time.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = model::save) { Text(if (state.dirty) "Save changes" else "Save snapshot") }
+                    Button(onClick = model::save, enabled = !state.busy) { Text(if (state.dirty) "Save changes" else "Save snapshot") }
                     OutlinedButton(onClick = { model.navigate(Screen.STATUS) }) { Text("Inspect character") }
-                    if (state.dirty) TextButton(onClick = { discard = true }) { Text("Discard changes") }
+                    if (state.dirty) TextButton(onClick = { discard = true }, enabled = !state.busy) { Text("Discard changes") }
                 }
             }
         }
@@ -275,7 +278,7 @@ private fun Journal(state: GameUiState, model: GameViewModel) {
             OutlinedTextField(note, { if (it.length <= 2000) note = it }, label = { Text("Plans, promises, and reflections") }, minLines = 3, maxLines = 7, modifier = Modifier.fillMaxWidth())
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("${note.length}/2000", Modifier.weight(1f), style = MaterialTheme.typography.labelSmall)
-                TextButton(onClick = { model.addJournal(note); note = "" }, enabled = note.isNotBlank() && state.preferencesReady && !state.busy) { Text("Add entry") }
+                TextButton(onClick = { model.addJournal(note); note = ""; focus.clearFocus() }, enabled = note.isNotBlank() && state.preferencesReady && !state.busy) { Text("Add entry") }
             }
         }
         item { Text("YOUR CHRONICLE", color = Gold, letterSpacing = 2.sp, style = MaterialTheme.typography.labelMedium) }
@@ -340,7 +343,7 @@ private fun SaveManager(state: GameUiState, model: GameViewModel, onImport: () -
     var delete by remember { mutableStateOf<SlotEntity?>(null) }
     LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { Heading("THE ARCHIVE", "Every life, preserved.", "Independent local campaigns. Export a portable .xianxia.json file to keep a copy outside this app.") }
-        item { OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) { Text("Import a save into a new slot") } }
+        item { OutlinedButton(onClick = onImport, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) { Text("Import a save into a new slot") } }
         item { Text("Exports contain the stored revision. Save pending changes in Journey first. Deleting the app also deletes local saves and backups.", style = MaterialTheme.typography.bodySmall, color = Gold) }
         if (state.slots.isEmpty()) item { Panel {
             Text("No campaigns yet.", style = MaterialTheme.typography.titleLarge)
@@ -354,12 +357,12 @@ private fun SaveManager(state: GameUiState, model: GameViewModel, onImport: () -
                 Text("${slot.realmName} ${slot.substage} · Day ${slot.day}", color = Gold)
                 Text("Revision ${slot.revision} · ${date(slot.updatedAt)}", style = MaterialTheme.typography.bodySmall)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { model.load(slot.id) }) { Text("Load") }
-                    OutlinedButton(onClick = { onExport(slot) }) { Text("Export") }
-                    OutlinedButton(onClick = { model.duplicate(slot) }) { Text("Duplicate") }
-                    TextButton(onClick = { rename = slot }) { Text("Rename") }
-                    TextButton(onClick = { model.showBackups(slot) }) { Text("Backups") }
-                    TextButton(onClick = { delete = slot }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                    Button(onClick = { model.load(slot.id) }, enabled = !state.busy) { Text("Load") }
+                    OutlinedButton(onClick = { onExport(slot) }, enabled = !state.busy) { Text("Export") }
+                    OutlinedButton(onClick = { model.duplicate(slot) }, enabled = !state.busy) { Text("Duplicate") }
+                    TextButton(onClick = { rename = slot }, enabled = !state.busy) { Text("Rename") }
+                    TextButton(onClick = { model.showBackups(slot) }, enabled = !state.busy) { Text("Backups") }
+                    TextButton(onClick = { delete = slot }, enabled = !state.busy) { Text("Delete", color = MaterialTheme.colorScheme.error) }
                 }
             }
         }
@@ -375,7 +378,7 @@ private fun Settings(state: GameUiState, model: GameViewModel) {
         item { Panel {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) { Text("Automatic saving", style = MaterialTheme.typography.titleMedium); Text("Persist each journal entry and name change.", style = MaterialTheme.typography.bodySmall) }
-                Switch(checked = state.preferences.autosave, onCheckedChange = model::setAutosave, enabled = state.preferencesReady)
+                Switch(checked = state.preferences.autosave, onCheckedChange = model::setAutosave, enabled = state.preferencesReady && !state.busy)
             }
             Text("New campaigns are always saved immediately. With autosave off, changes remain only in memory until you save. Enabling it saves any pending changes.")
         } }
