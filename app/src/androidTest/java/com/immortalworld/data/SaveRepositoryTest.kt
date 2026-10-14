@@ -163,4 +163,33 @@ class SaveRepositoryTest {
         assertEquals(restored.save, engine.execute(restored.save, GameAction(ActionKind.DEFEND), "retry", "request-2").state)
     }
 
+    @Test fun versionTwoStoryUpgradeKeepsOriginalBackupAndSurvivesRestart() = runBlocking {
+        val engine = AdventureEngine()
+        val s = engine.execute(AdventureFactory.ensure(campaign()), GameAction(ActionKind.OBSERVE), "Observe", "old-look").state
+        val created = repository.create(s)
+        val old = JSONObject(SaveCodec.encode(s)).put("version", 2)
+        old.getJSONObject("adventure").apply {
+            remove("visits")
+            val receipt = getJSONArray("history").getJSONObject(0)
+            listOf("kind", "locationId", "story", "dialogue", "sceneContext").forEach { receipt.remove(it) }
+        }
+        db.saves().putState(StateEntity(s.id, old.toString()))
+        db.close(); open()
+        val loaded = repository.load(s.id)
+        assertEquals(3, loaded.save.version); assertEquals(s.player, loaded.save.player); assertEquals(s.randomState, loaded.save.randomState)
+        val next = engine.execute(loaded.save, GameAction(ActionKind.OBSERVE), "Observe again", "new-look").state
+        val written = repository.save(next, created.revision, "Before story migration")
+        val backup = db.saves().backup(repository.backups(s.id).first().id)!!
+        assertEquals(2, JSONObject(backup.json).getInt("version"))
+        db.close(); open()
+        val reopened = repository.load(s.id)
+        assertEquals(written, reopened)
+        assertTrue(reopened.save.adventure!!.history.last().story.isNotBlank())
+        assertTrue(reopened.save.adventure!!.history.last().sceneContext.isNotBlank())
+        assertEquals(s.adventure!!.history.first().facts, reopened.save.adventure!!.history.first().facts)
+        val restored = repository.restore(s.id, backup.id, reopened.revision)
+        assertEquals(s.player, restored.save.player); assertEquals(s.randomState, restored.save.randomState)
+        assertEquals(1, restored.save.adventure!!.history.size)
+    }
+
 }

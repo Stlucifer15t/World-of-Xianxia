@@ -132,7 +132,7 @@ object SceneNarrator {
             ActionKind.OBSERVE -> if (request.target.isBlank()) scene(s) else listOf(primary.joinToString(" "))
             ActionKind.TALK -> {
                 val n = a.npcs.firstOrNull { it.character.id == request.target }
-                listOf(if (n == null) primary.joinToString(" ") else if (n.locationId != a.locationId) "${n.character.name} gives the reply before leaving along the patrol route. The place where the conversation took place is quiet again." else npcActivity(s, n))
+                listOf(if (n == null) primary.joinToString(" ") else if (n.locationId != a.locationId) "${n.character.name} gives the reply before leaving along the patrol route. The place where the conversation took place is quiet again." else npcActivity(s, n), primary.filter { it != result.dialogue }.joinToString(" "))
             }
             ActionKind.ACTIVITY, ActionKind.CLAIM_OFFLINE -> {
                 val activity = if (request.kind == ActionKind.CLAIM_OFFLINE) before.adventure!!.idlePlan?.activity else request.target
@@ -160,7 +160,7 @@ object SceneNarrator {
 object StoryText {
     fun paragraphs(text: String): List<String> {
         val blocks = text.trim().split(Regex("\\n\\s*\\n+")).map { it.replace(Regex("\\s*\\n\\s*"), " ").trim() }.filter { it.isNotEmpty() }
-        if (blocks.size < 5 || blocks.count { it.length < 120 } < blocks.size * 2 / 3) return blocks
+        if (blocks.size < 2 || blocks.count { it.length < 120 } * 3 < blocks.size * 2) return blocks
         val grouped = mutableListOf<String>(); var buffer = ""
         for (block in blocks) {
             buffer = if (buffer.isEmpty()) block else "$buffer $block"

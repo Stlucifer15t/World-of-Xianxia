@@ -87,6 +87,9 @@ object StoryChecks {
         "spiritual sense is seeded costs energy and cannot reveal hidden traits" to {
             val s = sample(); val request = IntentParser.parse(s, "examine Elder Wen with spiritual sense")!!
             check(request.kind == ActionKind.SENSE && request.target == "wen")
+            check(IntentParser.parse(s, "Do not examine Elder Wen with spiritual sense") == null)
+            check(IntentParser.parse(s, "Examine Elder Wen with spiritual sense if he allows it") == null)
+            check(IntentParser.parse(s, "Think about Elder Wen and spiritual sense") == null)
             val result = engine.apply(s, request)
             check(result == engine.apply(s, request))
             check(result.state.player.energy == s.player.energy - 3 && result.state.adventure!!.hour == 9)
@@ -117,8 +120,9 @@ object StoryChecks {
             val text = lines.joinToString("\n\n")
             val result = StoryText.paragraphs(text)
             check(result.size < 5 && result.joinToString(" ") == lines.joinToString(" "))
-            val prose = "A long paragraph.\nIt continues.\n\nA separate paragraph."
-            check(StoryText.paragraphs(prose) == listOf("A long paragraph. It continues.", "A separate paragraph."))
+            val paragraph = "The winding path follows the river bank and the low hills. ".repeat(4).trim()
+            check(StoryText.paragraphs("$paragraph\nIt continues.\n\n$paragraph") == listOf("$paragraph It continues.", paragraph))
+            check(StoryText.paragraphs("A single sentence.\n\nAnother sentence.").single() == "A single sentence. Another sentence.")
         },
     )
     @JvmStatic fun main(args: Array<String>) {

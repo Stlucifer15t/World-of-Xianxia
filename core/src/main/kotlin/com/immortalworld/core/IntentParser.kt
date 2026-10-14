@@ -7,6 +7,8 @@ object IntentParser {
         val s = AdventureFactory.ensure(save); val a = s.adventure!!
         val t = input.trim().lowercase().removePrefix("i ").removePrefix("want to ").removePrefix("would like to ")
         fun starts(vararg verbs: String) = verbs.any { t == it || t.startsWith("$it ") }
+        // Conditional/negated instructions need interpretation, not an unconditional local command.
+        if (!starts("say", "ask", "talk", "speak", "tell") && Regex("\\b(do not|don't|never|unless|if|might|could)\\b").containsMatchIn(t)) return null
         val npc = a.npcs.mapNotNull { n ->
             val full = t.indexOf(n.character.name.lowercase()).takeIf { it >= 0 }
             val short = Regex("\\b${Regex.escape(n.character.id)}\\b").find(t)?.range?.first
@@ -27,7 +29,7 @@ object IntentParser {
                 val dest = a.locations.firstOrNull { t.contains(it.name.lowercase()) || Regex("\\b${Regex.escape(it.id)}\\b").containsMatchIn(t) } ?: return null
                 GameAction(ActionKind.TRAVEL, dest.id)
             }
-            ("spiritual sense" in t || "sense his aura" in t || "sense her aura" in t) && npc != null -> GameAction(ActionKind.SENSE, npc.character.id)
+            starts("examine", "inspect", "sense", "probe", "scan", "study", "use", "look", "extend", "reach") && ("spiritual sense" in t || "sense his aura" in t || "sense her aura" in t) && npc != null -> GameAction(ActionKind.SENSE, npc.character.id)
             starts("inspect", "read", "examine", "look") && ("notice" in t || "recruitment" in t) -> GameAction(ActionKind.OBSERVE, "noticeboard")
             starts("examine", "inspect") && npc != null -> GameAction(ActionKind.OBSERVE, npc.character.id)
             starts("look", "observe", "inspect", "status") -> GameAction(ActionKind.OBSERVE, item?.id ?: technique?.id ?: npc?.character?.id ?: if (starts("status") || "myself" in t) "self" else "")

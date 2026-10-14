@@ -40,7 +40,7 @@ private fun StoryReceipt(record: ActionRecord) {
         Text("YOU · Day ${record.day}, ${record.hour.toString().padStart(2, '0')}:00", color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.labelMedium)
         Text(record.input, fontSize = 17.sp, lineHeight = 25.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp, bottom = 18.dp))
         if (!record.accepted) Text("ACTION NOT RESOLVED", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
-        if (record.kind in listOf("BREAKTHROUGH", "JOIN", "TURN_IN", "CHALLENGE"))
+        if (record.accepted && record.kind in listOf("BREAKTHROUGH", "JOIN", "TURN_IN", "CHALLENGE"))
             Text("A TURN IN THE JOURNEY", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(bottom = 12.dp))
         StoryProse(record.narration.ifBlank { record.story.ifBlank { record.facts.joinToString(" ") } })
         if (record.dialogue.isNotBlank()) StoryProse(record.dialogue, dialogue = true)
@@ -60,13 +60,15 @@ internal fun AdventureScreen(state: GameUiState, model: GameViewModel) {
     val a = save.adventure ?: return
     val p = save.player
     val focus = LocalFocusManager.current
+    val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
     val submit = { focus.clearFocus(); model.submitAction() }
     var sheet by rememberSaveable { mutableStateOf("") }
     var shown by rememberSaveable { mutableIntStateOf(3) }
     val scroll = rememberLazyListState()
     LaunchedEffect(a.history.lastOrNull()?.id) { scroll.scrollToItem(0) }
     BoxWithConstraints(Modifier.fillMaxSize().testTag("adventure")) {
-        val compact = maxHeight < 360.dp
+        val compact = maxHeight < 360.dp * fontScale
         Column(Modifier.fillMaxSize()) {
             Column(Modifier.padding(horizontal = 18.dp, vertical = 6.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -104,7 +106,7 @@ internal fun AdventureScreen(state: GameUiState, model: GameViewModel) {
             Surface(color = MaterialTheme.colorScheme.surface) {
                 Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
                     OutlinedTextField(state.actionDraft, model::actionDraft, label = { Text("What do you do or say?") },
-                        placeholder = { Text("Ask, explore, bargain, cultivate…") }, minLines = if (compact) 1 else 3, maxLines = if (compact) 2 else 5,
+                        placeholder = { Text("Ask, explore, bargain, cultivate…") }, minLines = if (compact) 1 else if (keyboardVisible) 2 else 3, maxLines = if (compact) 2 else 5,
                         textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp, lineHeight = 26.sp),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { if (!state.busy && state.actionDraft.isNotBlank()) submit() }),
                         modifier = Modifier.fillMaxWidth().testTag("action_input"))

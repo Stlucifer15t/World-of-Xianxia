@@ -1,5 +1,15 @@
 package com.immortalworld.ui
 
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -89,4 +99,30 @@ class CreationFlowTest {
         compose.onNodeWithText("Jade River Crossing", substring = false).assertIsDisplayed()
 
     }
+    @Test fun narrowLargeTextLayoutKeepsComposerAndNavigationUsable() {
+        compose.runOnUiThread {
+            val model = ViewModelProvider(compose.activity)[GameViewModel::class.java]
+            model.create("Narrow story viewport")
+            compose.activity.setContent {
+                val density = LocalDensity.current.density
+                CompositionLocalProvider(LocalDensity provides Density(density, fontScale = 1.3f)) {
+                    Box(Modifier.width(320.dp).fillMaxHeight()) { ImmortalWorldApp(model) }
+                }
+            }
+        }
+        awaitNode(hasTestTag("adventure")); awaitOperation()
+        compose.onNodeWithTag("action_input").performTextInput("Sit beneath a tree and cultivate for 1 hour")
+        compose.onNodeWithTag("submit_action").assertIsDisplayed().performClick()
+        awaitNode(hasText("Day 1 · 09:00", substring = true)); awaitOperation()
+        compose.onNodeWithTag("action_input").performTextInput("An unfinished, deliberately longer approach to the next conversation. ".repeat(4))
+        compose.onNodeWithTag("submit_action").assertIsDisplayed()
+        compose.onNodeWithTag("journey_menu").assertIsDisplayed().performClick()
+        compose.onNodeWithTag("journey_sheet").performScrollToNode(hasText("Inventory", substring = false))
+        compose.onNodeWithText("Inventory", substring = false).performClick()
+        awaitNode(hasText("CAMPAIGN RECORD"))
+        compose.onNodeWithTag("nav_journey").performClick()
+        awaitNode(hasTestTag("adventure"))
+        compose.onNodeWithTag("action_input").assertTextContains("An unfinished, deliberately longer approach", substring = true)
+    }
+
 }
