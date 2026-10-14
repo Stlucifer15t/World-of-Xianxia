@@ -141,7 +141,7 @@ class SaveRepositoryTest {
         val loaded = repository.load(original.save.id)
         assertEquals(original.save.player, loaded.save.player)
         val upgraded = repository.save(AdventureFactory.ensure(loaded.save), loaded.revision, "Before adventure initialization / v1 migration")
-        assertEquals(2, upgraded.save.version)
+        assertEquals(3, upgraded.save.version)
         assertNotNull(upgraded.save.adventure)
         val backup = db.saves().backup(repository.backups(original.save.id).first().id)!!
         assertEquals(1, JSONObject(backup.json).getInt("version"))

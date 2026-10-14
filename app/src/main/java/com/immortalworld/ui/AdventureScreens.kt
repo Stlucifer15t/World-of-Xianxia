@@ -1,15 +1,16 @@
-@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.immortalworld.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalDensity
@@ -18,74 +19,139 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.immortalworld.ai.AiConfig
 import com.immortalworld.core.*
 import kotlinx.coroutines.delay
+
+@Composable
+private fun StoryProse(text: String, dialogue: Boolean = false) {
+    StoryText.paragraphs(text).forEach { paragraph ->
+        Text(paragraph, fontSize = if (dialogue) 18.sp else 19.sp,
+            lineHeight = if (dialogue) 28.sp else 30.sp,
+            color = if (dialogue) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp))
+    }
+}
+
+@Composable
+private fun StoryReceipt(record: ActionRecord) {
+    Column(Modifier.fillMaxWidth().testTag("story_${record.id}")) {
+        Text("YOU · Day ${record.day}, ${record.hour.toString().padStart(2, '0')}:00", color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.labelMedium)
+        Text(record.input, fontSize = 17.sp, lineHeight = 25.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp, bottom = 18.dp))
+        if (!record.accepted) Text("ACTION NOT RESOLVED", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
+        if (record.kind in listOf("BREAKTHROUGH", "JOIN", "TURN_IN", "CHALLENGE"))
+            Text("A TURN IN THE JOURNEY", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(bottom = 12.dp))
+        StoryProse(record.narration.ifBlank { record.story.ifBlank { record.facts.joinToString(" ") } })
+        if (record.dialogue.isNotBlank()) StoryProse(record.dialogue, dialogue = true)
+        var expanded by rememberSaveable(record.id) { mutableStateOf(false) }
+        TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Hide action details" else "Action details · facts & calculations") }
+        if (expanded) {
+            Text(if (record.narration.isBlank()) "AUTHORITATIVE RESULTS" else "AUTHORITATIVE RESULTS · AI prose cannot change these", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            record.facts.forEach { Text(it, modifier = Modifier.padding(vertical = 5.dp), fontSize = 15.sp, lineHeight = 22.sp) }
+            record.calculations.forEach { Text(it, modifier = Modifier.padding(vertical = 5.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
+    }
+}
 
 @Composable
 internal fun AdventureScreen(state: GameUiState, model: GameViewModel) {
     val save = state.active?.save ?: return
     val a = save.adventure ?: return
     val p = save.player
-    val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     val focus = LocalFocusManager.current
     val submit = { focus.clearFocus(); model.submitAction() }
-    Column(Modifier.fillMaxSize().testTag("adventure")) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-            if (!keyboardVisible) Text(save.world.currentLocation, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.secondary)
-            Text("Day ${save.world.day} · ${a.hour.toString().padStart(2, '0')}:00 · HP ${p.health}/${p.maxHealth} · Qi ${p.energy}/${p.maxEnergy}", style = MaterialTheme.typography.bodySmall)
-            if (!keyboardVisible) Text("${save.realms.first { it.id == p.cultivation.realmId }.name} ${p.cultivation.substage} · ${p.cultivation.progress.toInt()}% · ${p.spiritStones} stones", style = MaterialTheme.typography.bodySmall)
-        }
-        if (!keyboardVisible) LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(listOf(Screen.STATUS to "Character", Screen.CULTIVATION to "Cultivation", Screen.INVENTORY to "Inventory", Screen.TECHNIQUES to "Techniques", Screen.QUESTS to "Quests", Screen.MAP to "Map", Screen.NPCS to "NPCs", Screen.EVENTS to "Events", Screen.JOURNAL to "Journal")) { (screen, name) ->
-                SuggestionChip(onClick = { model.navigate(screen) }, label = { Text(name) })
+    var sheet by rememberSaveable { mutableStateOf("") }
+    var shown by rememberSaveable { mutableIntStateOf(3) }
+    val scroll = rememberLazyListState()
+    LaunchedEffect(a.history.lastOrNull()?.id) { scroll.scrollToItem(0) }
+    BoxWithConstraints(Modifier.fillMaxSize().testTag("adventure")) {
+        val compact = maxHeight < 360.dp
+        Column(Modifier.fillMaxSize()) {
+            Column(Modifier.padding(horizontal = 18.dp, vertical = 6.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(save.world.currentLocation, fontSize = 18.sp, lineHeight = 24.sp, color = MaterialTheme.colorScheme.secondary)
+                        if (!compact) Text("${SceneNarrator.timeOfDay(a.hour)} · ${SceneNarrator.weather(save)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    TextButton(onClick = { focus.clearFocus(); sheet = "menu" }, modifier = Modifier.testTag("journey_menu")) { Text("Menu") }
+                }
+                Text("Day ${save.world.day} · ${a.hour.toString().padStart(2, '0')}:00 · HP ${p.health}/${p.maxHealth} · Qi ${p.energy}/${p.maxEnergy}", style = MaterialTheme.typography.bodySmall)
+                Text("${save.realms.first { it.id == p.cultivation.realmId }.name} ${p.cultivation.substage} · ${p.cultivation.progress.toInt()}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                a.combat?.let { Text("${it.enemy.name} · ${it.enemy.health}/${it.enemy.maxHealth} HP · Turn ${it.turn} · ${it.position}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary) }
+            }
+            LazyColumn(Modifier.weight(1f).testTag("adventure_history"), state = scroll,
+                contentPadding = PaddingValues(horizontal = 22.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+                state.pendingAction?.let { pending -> item { Column {
+                    Text("REVIEW AI INTERPRETATION", color = MaterialTheme.colorScheme.secondary)
+                    Text("${pending.action.kind}: ${pending.action.target}\n${pending.action.detail}\nDuration (activities): ${pending.action.hours}h")
+                    Text("No mechanics have run. Confirm only if this matches your intention.", style = MaterialTheme.typography.bodySmall)
+                    FlowRow { Button(onClick = model::confirmProposal, enabled = !state.busy) { Text("Confirm action") }; TextButton(onClick = model::dismissProposal) { Text("Reject") } }
+                } } }
+                if (a.history.isEmpty()) item {
+                    Column {
+                        Text("IMMORTAL WORLD · THE JOURNEY", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(bottom = 18.dp))
+                        SceneNarrator.scene(save).forEach { StoryProse(it) }
+                        Text("Your words direct the journey. Ask Mei about cultivation resources, inspect the recruitment notice, or describe your own approach.", fontSize = 16.sp, lineHeight = 24.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                items(a.history.takeLast(shown).asReversed(), key = { it.id }) { record -> StoryReceipt(record) }
+                if (a.history.size > shown) item { TextButton(onClick = { shown += 10 }) { Text("Read earlier entries (${a.history.size - shown})") } }
+                if (a.locationId == "ruins" && "wolf" !in a.defeated && a.combat == null) item {
+                    Text("The inner courtyard is guarded. Searching it starts combat; investigating the outer wards does not.", color = MaterialTheme.colorScheme.secondary, fontSize = 16.sp, lineHeight = 24.sp)
+                }
+            }
+            Surface(color = MaterialTheme.colorScheme.surface) {
+                Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
+                    OutlinedTextField(state.actionDraft, model::actionDraft, label = { Text("What do you do or say?") },
+                        placeholder = { Text("Ask, explore, bargain, cultivate…") }, minLines = if (compact) 1 else 3, maxLines = if (compact) 2 else 5,
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp, lineHeight = 26.sp),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { if (!state.busy && state.actionDraft.isNotBlank()) submit() }),
+                        modifier = Modifier.fillMaxWidth().testTag("action_input"))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Button(onClick = submit, enabled = !state.busy && state.actionDraft.isNotBlank(), modifier = Modifier.weight(1f).testTag("submit_action")) { Text("Submit action") }
+                        if (state.aiConfig.enabled) TextButton(onClick = model::attemptOffline, enabled = !state.busy && state.actionDraft.isNotBlank()) { Text("Offline") }
+                        TextButton(onClick = { focus.clearFocus(); model.navigate(Screen.JOURNAL) }, enabled = !state.busy || state.aiWorking) { Text("Notes") }
+                    }
+                }
             }
         }
-        LazyColumn(Modifier.weight(1f).testTag("adventure_history"), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item { Panel {
-                Text(if (a.combat != null) "ENCOUNTER · YOUR TURN" else "CURRENT SCENE", color = MaterialTheme.colorScheme.primary)
-                Text(a.locations.first { it.id == a.locationId }.description)
-                Text("Nearby: ${a.npcs.filter { it.locationId == a.locationId }.joinToString { it.character.name }.ifEmpty { "no known NPCs" }}")
-                a.combat?.let { Text("${it.enemy.name}: ${it.enemy.health}/${it.enemy.maxHealth} HP · Turn ${it.turn} · ${it.position}", color = MaterialTheme.colorScheme.secondary) }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    }
+    if (sheet.isNotEmpty()) ModalBottomSheet(onDismissRequest = { sheet = "" }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        LazyColumn(Modifier.fillMaxWidth().testTag("journey_sheet"), contentPadding = PaddingValues(start = 22.dp, end = 22.dp, bottom = 30.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            item { Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(when (sheet) { "scene" -> "Here, now"; "recent" -> "Recent developments"; else -> "Journey menu" }, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.secondary)
+                TextButton(onClick = { sheet = "" }, modifier = Modifier.testTag("close_journey_sheet")) { Text("Close") }
+            } }
+            if (sheet == "scene") item { Column { SceneNarrator.scene(save).forEach { StoryProse(it) } } }
+            if (sheet == "recent") {
+                item { Text("${save.world.currentLocation} · Day ${save.world.day}, ${a.hour}:00\nClosing this panel returns to your place in the story. The campaign event log and NPC records keep the existing retention rules.", style = MaterialTheme.typography.bodyMedium) }
+                if (a.events.isEmpty()) item { Text("No recorded developments yet.") }
+                items(a.events.takeLast(20).asReversed(), key = { it.id }) { event -> Column {
+                    Text("Day ${event.day} · ${event.hour}:00", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
+                    Text(event.text, fontSize = 17.sp, lineHeight = 26.sp)
+                } }
+                item { TextButton(onClick = { sheet = ""; model.navigate(Screen.EVENTS) }) { Text("Full event log") } }
+            }
+            if (sheet == "menu") {
+                item { FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { sheet = "scene" }) { Text("Current surroundings") }
+                    OutlinedButton(onClick = { sheet = "recent" }) { Text("Recent events") }
+                } }
+                item { Text("OPTIONAL ACTIONS", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium) }
+                item { FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     val shortcuts = if (a.combat == null) listOf("Observe" to GameAction(ActionKind.OBSERVE), "Investigate" to GameAction(ActionKind.INVESTIGATE), "Search" to GameAction(ActionKind.SEARCH), "Rest (2h)" to GameAction(ActionKind.REST))
-                    else listOf("Attack" to GameAction(ActionKind.ATTACK), "Defend" to GameAction(ActionKind.DEFEND), "Dodge" to GameAction(ActionKind.DODGE), "Retreat" to GameAction(ActionKind.RETREAT))
-                    TextButton(onClick = model::save, enabled = !state.busy) { Text("Save snapshot") }
-                    shortcuts.forEach { (label, action) -> OutlinedButton(onClick = { model.command(action, label) }, enabled = !state.busy) { Text(label) } }
-                }
-                if (a.locationId == "ruins" && "wolf" !in a.defeated && a.combat == null) Text("Searching the guarded courtyard starts combat. Investigating the outer wards does not.", style = MaterialTheme.typography.bodySmall)
-            } }
-            state.pendingAction?.let { pending -> item { Panel {
-                Text("REVIEW AI INTERPRETATION", color = MaterialTheme.colorScheme.secondary)
-                Text("${pending.action.kind}: ${pending.action.target}\n${pending.action.detail}\nDuration (activities): ${pending.action.hours}h")
-                Text("No mechanics have run. Confirm only if this matches your intention.", style = MaterialTheme.typography.bodySmall)
-                Row { Button(onClick = model::confirmProposal, enabled = !state.busy) { Text("Confirm action") }; TextButton(onClick = model::dismissProposal) { Text("Reject") } }
-            } } }
-            if (a.history.isEmpty()) item { Text("Your adventure is yours to direct. Try “Ask Mei about Moonfall Ruins”, “travel to Jade River Crossing”, or describe a creative approach. Unknown offline actions use a bounded skill check, not automatic success.") }
-            items(a.history.asReversed(), key = { it.id }) { record -> Panel {
-                Text("YOU · Day ${record.day}, ${record.hour}:00", color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.labelMedium)
-                Text(record.input)
-                Text(if (record.accepted) "ENGINE RESULTS" else "NOT RESOLVED", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
-                record.facts.forEach { Text(it) }
-                if (record.narration.isNotBlank()) { HorizontalDivider(); Text("AI narration · engine results above remain authoritative", style = MaterialTheme.typography.labelSmall); Text(record.narration) }
-                var expanded by rememberSaveable(record.id) { mutableStateOf(false) }
-                if (record.calculations.isNotEmpty()) {
-                    TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Hide calculations" else "Show calculations") }
-                    if (expanded) record.calculations.forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
-                }
-            } }
-        }
-        Surface(color = MaterialTheme.colorScheme.surface) {
-            Column(Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
-                OutlinedTextField(state.actionDraft, model::actionDraft, label = { Text("What do you do or say?") },
-                    placeholder = { Text("Describe your action, dialogue, or intention…") }, minLines = if (keyboardVisible) 1 else 2, maxLines = 3,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { if (!state.busy && state.actionDraft.isNotBlank()) submit() }),
-                    modifier = Modifier.fillMaxWidth().testTag("action_input"))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = submit, enabled = !state.busy && state.actionDraft.isNotBlank(), modifier = Modifier.weight(1f)) { Text("Submit action") }
-                    if (state.aiConfig.enabled) TextButton(onClick = model::attemptOffline, enabled = !state.busy && state.actionDraft.isNotBlank()) { Text("Attempt offline") }
-                    TextButton(onClick = { model.navigate(Screen.JOURNAL) }) { Text("Notes") }
-                }
+                        else listOf("Attack" to GameAction(ActionKind.ATTACK), "Defend" to GameAction(ActionKind.DEFEND), "Dodge" to GameAction(ActionKind.DODGE), "Retreat" to GameAction(ActionKind.RETREAT))
+                    shortcuts.forEach { (label, action) -> OutlinedButton(onClick = { sheet = ""; model.command(action, label) }, enabled = !state.busy) { Text(label) } }
+                    TextButton(onClick = { sheet = ""; model.save() }, enabled = !state.busy) { Text("Save snapshot") }
+                } }
+                item { Text("CAMPAIGN", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium) }
+                item { FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(Screen.STATUS to "Character", Screen.CULTIVATION to "Cultivation", Screen.INVENTORY to "Inventory", Screen.TECHNIQUES to "Techniques", Screen.QUESTS to "Quests", Screen.MAP to "Map", Screen.NPCS to "NPCs", Screen.EVENTS to "Events", Screen.JOURNAL to "Journal", Screen.SAVES to "Saves", Screen.SETTINGS to "Settings / AI", Screen.HOME to "Home").forEach { (screen, name) ->
+                        TextButton(onClick = { sheet = ""; model.navigate(screen) }, enabled = !state.busy || state.aiWorking) { Text(name) }
+                    }
+                } }
+                item { Text("Try: “examine Elder Wen with spiritual sense”, “travel to Jade River Crossing”, “negotiate medicinal herbs”, or “sit beneath a tree and cultivate”. Creative attempts use validated checks, not automatic success. Spiritual sense costs 3 energy and 1 hour and can be noticed.\n\n${p.spiritStones} spirit stones · ${a.simulationMode.lowercase()} background simulation", fontSize = 16.sp, lineHeight = 24.sp) }
             }
         }
     }
@@ -172,14 +238,21 @@ internal fun AdventureLibrary(state: GameUiState, model: GameViewModel) {
                 Text(if (location.discovered || location.id == a.locationId) location.name else "Unexplored site", style = MaterialTheme.typography.titleMedium)
                 if (location.discovered || location.id == a.locationId) {
                     Text(location.description); Text("Danger ${location.danger} · Roads: ${AdventureEngine.neighbors(location.id).mapNotNull { id -> a.locations.firstOrNull { it.id == id }?.name }.joinToString()}")
+                    if (location.id in AdventureEngine.neighbors(a.locationId)) SceneNarrator.route(a.locationId, location.id)?.let { Text(it, fontSize = 17.sp, lineHeight = 26.sp) }
                     Button(onClick = { model.command(GameAction(ActionKind.TRAVEL, location.id), "Travel to ${location.name}") }, enabled = ready && a.combat == null && location.id != a.locationId && (s.rules.godMode || location.id in AdventureEngine.neighbors(a.locationId))) { Text(if (location.id == a.locationId) "Current location" else "Travel · 2 hours") }
                 }
             } }
         }
         if (state.screen == Screen.NPCS) items(a.npcs, key = { it.character.id }) { n -> Panel {
             Text(n.character.name, style = MaterialTheme.typography.titleLarge)
-            Text("${n.character.personality}\nGoal: ${n.goal}\nOpinion: ${n.relationship}\nLocation: ${a.locations.first { it.id == n.locationId }.name}")
-            Text("${s.realms.first { it.id == n.character.cultivation.realmId }.name} ${n.character.cultivation.substage} · HP ${n.character.health} · Strength ${n.character.attributes.strength}")
+            Text("${n.character.personality}\nOpinion: ${n.relationship}\nLast recorded location: ${a.locations.first { it.id == n.locationId }.name}")
+            if (n.locationId == a.locationId) Text(SceneNarrator.npcActivity(s, n), fontSize = 18.sp, lineHeight = 28.sp)
+            var mechanics by rememberSaveable(n.character.id) { mutableStateOf(false) }
+            TextButton(onClick = { mechanics = !mechanics }) { Text(if (mechanics) "Hide mechanical record" else "Mechanical record · out of character") }
+            if (mechanics) {
+                Text("${s.realms.first { it.id == n.character.cultivation.realmId }.name} ${n.character.cultivation.substage} · HP ${n.character.health} · Strength ${n.character.attributes.strength}")
+                Text("System reference, not knowledge granted by looking or dialogue. Spiritual-sense examinations resolve separately.", style = MaterialTheme.typography.bodySmall)
+            }
             val nearby = n.locationId == a.locationId && a.combat == null
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = { model.command(GameAction(ActionKind.TALK, n.character.id, "What do you know about Moonfall Ruins?"), "Ask ${n.character.name} about Moonfall Ruins") }, enabled = ready && nearby) { Text("Ask about ruins") }

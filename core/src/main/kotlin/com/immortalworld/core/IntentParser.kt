@@ -27,6 +27,9 @@ object IntentParser {
                 val dest = a.locations.firstOrNull { t.contains(it.name.lowercase()) || Regex("\\b${Regex.escape(it.id)}\\b").containsMatchIn(t) } ?: return null
                 GameAction(ActionKind.TRAVEL, dest.id)
             }
+            ("spiritual sense" in t || "sense his aura" in t || "sense her aura" in t) && npc != null -> GameAction(ActionKind.SENSE, npc.character.id)
+            starts("inspect", "read", "examine", "look") && ("notice" in t || "recruitment" in t) -> GameAction(ActionKind.OBSERVE, "noticeboard")
+            starts("examine", "inspect") && npc != null -> GameAction(ActionKind.OBSERVE, npc.character.id)
             starts("look", "observe", "inspect", "status") -> GameAction(ActionKind.OBSERVE, item?.id ?: technique?.id ?: npc?.character?.id ?: if (starts("status") || "myself" in t) "self" else "")
             starts("investigate", "examine", "survey") -> GameAction(ActionKind.INVESTIGATE)
             starts("search", "gather", "forage", "explore") -> GameAction(ActionKind.SEARCH)
@@ -44,6 +47,8 @@ object IntentParser {
             starts("join") -> GameAction(ActionKind.JOIN, "azure")
             starts("accept") -> GameAction(ActionKind.ACCEPT_QUEST, quest)
             starts("turn in", "deliver", "report", "complete quest") -> GameAction(ActionKind.TURN_IN, quest)
+            starts("sit", "settle", "kneel") && (Regex("\\bcultivat(?:e|ion)\\b").containsMatchIn(t) || "meditate" in t) -> GameAction(ActionKind.ACTIVITY,
+                if ("meditate" in t) "Meditation" else "Cultivation", hours = hours, method = s.player.cultivation.method, useHerb = "with herbs" in t)
             starts("rest", "sleep", "recover") -> GameAction(ActionKind.REST)
             starts("breakthrough", "break through", "advance realm") -> GameAction(ActionKind.BREAKTHROUGH)
             starts("cultivate", "meditate", "practice", "train", "brew", "craft") -> GameAction(ActionKind.ACTIVITY,
@@ -55,16 +60,29 @@ object IntentParser {
 }
 
 object ContextBuilder {
-    fun build(s: GameSave, input: String, facts: List<String> = emptyList()): NarrativeContext {
+    fun build(s: GameSave, input: String, facts: List<String> = emptyList(), record: ActionRecord? = null): NarrativeContext {
         val a = s.adventure!!
         val local = a.npcs.filter { it.locationId == a.locationId }
-        return NarrativeContext(s.player.name, s.world.currentLocation, facts.take(20),
-            local.flatMap { n -> n.memories.takeLast(3).map { "${n.character.name}: $it" } }.takeLast(9),
-            scene = a.locations.first { it.id == a.locationId }.description + "\n" + local.joinToString("\n") { n ->
-                "NPC id=${n.character.id}; ${n.character.name}; personality=${n.character.personality}; opinion=${n.relationship}; goal=${n.goal}; knowledge=${n.knowledge.joinToString("; ")}" },
-            input = input.take(2000), availableTargets = a.locations.filter { it.discovered }.map { "location ${it.id}: ${it.name}" } +
-                local.map { "npc ${it.character.id}: ${it.character.name}" } + listOfNotNull(a.combat?.let { "opponent ${it.enemy.id}: ${it.enemy.name}, health ${it.enemy.health}; position=${it.position}" }) + s.player.techniques.take(10).map { "technique ${it.id}: ${it.name}" } +
-                s.player.inventory.take(12).map { "item ${it.id}: ${it.name} x${it.quantity}" } + a.quests.map { "quest ${it.id}: ${it.name} (${it.status})" } + listOf("faction azure: Azure Cloud Sect"),
-            playerSummary = "${s.player.race}; realm=${s.player.cultivation.realmId} stage=${s.player.cultivation.substage}; HP=${s.player.health}/${s.player.maxHealth}; energy=${s.player.energy}; day=${s.world.day}, hour=${a.hour}; encounter=${a.combat?.enemy?.name ?: "none"}.")
+        val observedScene = if (record == null) SceneNarrator.scene(s).joinToString("\n\n")
+            else record.sceneContext.ifBlank { "Historical action without an observed-scene snapshot. Narrate only its recorded facts; do not reconstruct weather, crowds or unrecorded NPC activity." }
+        val kind = record?.kind?.let { name -> ActionKind.entries.firstOrNull { it.name == name } }
+        val pace = when {
+            kind == ActionKind.TRAVEL || kind == ActionKind.OBSERVE && record.input.trim().lowercase() in listOf("observe", "look", "look around") -> "scene"
+            kind in setOf(ActionKind.BREAKTHROUGH, ActionKind.CHALLENGE, ActionKind.JOIN) -> "major"
+            kind == ActionKind.TALK -> "dialogue"
+            else -> "brief"
+        }
+        return NarrativeContext(s.player.name, if (record == null) s.world.currentLocation else a.locations.firstOrNull { it.id == record.locationId }?.name ?: "Location not recorded for this historical action",
+            facts.take(20), if (record != null) emptyList() else local.flatMap { n -> n.memories.takeLast(3).map { "${n.character.name}: $it" } }.takeLast(9),
+            scene = observedScene.take(3500), input = input.take(2000),
+            availableTargets = if (record != null) emptyList() else a.locations.filter { it.discovered }.map { "location ${it.id}: ${it.name}" } +
+                local.map { "npc ${it.character.id}: ${it.character.name}" } + listOfNotNull(a.combat?.let { "opponent ${it.enemy.id}: ${it.enemy.name}, health ${it.enemy.health}; position=${it.position}" }) +
+                s.player.techniques.take(10).map { "technique ${it.id}: ${it.name}" } + s.player.inventory.take(12).map { "item ${it.id}: ${it.name} x${it.quantity}" } +
+                a.quests.map { "quest ${it.id}: ${it.name} (${it.status})" } + listOf("faction azure: Azure Cloud Sect") + (if (a.locationId == "village") listOf("noticeboard: the public sect recruitment notice") else emptyList()),
+            playerSummary = if (record != null) "Recorded action at day ${record.day}, hour ${record.hour}. Mechanics are only those in the authoritative facts; do not infer historical stats from the current campaign."
+                else "${s.player.race}; realm=${s.player.cultivation.realmId} stage=${s.player.cultivation.substage}; HP=${s.player.health}/${s.player.maxHealth}; energy=${s.player.energy}; day=${s.world.day}, hour=${a.hour}; encounter=${a.combat?.enemy?.name ?: "none"}.",
+            pace = pace, spokenDialogue = record?.dialogue.orEmpty(),
+            recentOpenings = a.history.filter { it.id != record?.id }.takeLast(2).map { (it.narration.ifBlank { it.story }).take(180) },
+        )
     }
 }

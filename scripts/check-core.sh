@@ -7,7 +7,10 @@ mkdir -p .cache/checks
 "$KOTLINC" core/src/main/kotlin/com/immortalworld/core/*.kt \
   core/src/test/kotlin/com/immortalworld/core/CoreChecks.kt \
   core/src/test/kotlin/com/immortalworld/core/AdventureChecks.kt \
+  core/src/test/kotlin/com/immortalworld/core/StoryChecks.kt \
   -include-runtime -d .cache/checks/core-checks.jar
 "${JAVA_HOME:+$JAVA_HOME/bin/}java" -cp .cache/checks/core-checks.jar com.immortalworld.core.CoreChecks
 
 "${JAVA_HOME:+$JAVA_HOME/bin/}java" -cp .cache/checks/core-checks.jar com.immortalworld.core.AdventureChecks
+
+"${JAVA_HOME:+$JAVA_HOME/bin/}java" -cp .cache/checks/core-checks.jar com.immortalworld.core.StoryChecks

@@ -6,14 +6,17 @@ import kotlin.math.roundToInt
 class AdventureEngine(private val clock: () -> Long = System::currentTimeMillis) : GameEngine {
     fun execute(save: GameSave, action: GameAction, input: String, id: String): EngineResult {
         val original = AdventureFactory.ensure(save)
-        original.adventure!!.history.find { it.id == id }?.let { return EngineResult(original, it.facts, it.calculations) }
+        original.adventure!!.history.find { it.id == id }?.let { return EngineResult(original, it.facts, it.calculations, it.dialogue) }
         require(input.isNotBlank() && input.length <= 2000 && id.length in 1..100)
         var accepted = true
         val result = try { apply(original, action) } catch (e: IllegalArgumentException) {
             accepted = false; EngineResult(original, listOf(e.message ?: "That action is not valid here."), emptyList())
         }
         val a = result.state.adventure!!
-        val record = ActionRecord(id, input, result.state.world.day, a.hour, result.facts, result.calculations, accepted = accepted)
+        val record = ActionRecord(id, input, result.state.world.day, a.hour, result.facts, result.calculations, accepted = accepted,
+            kind = action.kind.name, locationId = a.locationId,
+            story = if (accepted) SceneNarrator.action(original, action, result) else result.facts.joinToString(" "),
+            dialogue = result.dialogue, sceneContext = SceneNarrator.scene(result.state).joinToString("\n\n").take(3500))
         return result.copy(state = SaveValidator.validate(result.state.copy(adventure = a.copy(history = (a.history + record).takeLast(100)))))
     }
 
@@ -24,6 +27,7 @@ class AdventureEngine(private val clock: () -> Long = System::currentTimeMillis)
         val rng = WorldRandom(s.randomState)
         val facts = mutableListOf<String>(); val calculations = mutableListOf<String>(); val developments = mutableListOf<String>()
         var elapsed = 0
+        var dialogue = ""
         fun fact(text: String) { facts += text }
         fun npc(id: String) = a.npcs.firstOrNull { it.character.id == id && it.locationId == a.locationId }
             ?: throw IllegalArgumentException("That NPC is not at your location. Inspect the NPC list for their current whereabouts.")
@@ -178,7 +182,13 @@ class AdventureEngine(private val clock: () -> Long = System::currentTimeMillis)
                 when {
                     item != null -> fact("${item.name}: ${item.description} Rank ${item.rank}; kind ${item.kind}; quantity ${item.quantity}; power ${item.power}; slot ${item.equippedSlot ?: "unequipped"}.")
                     technique != null -> fact("${technique.name}: ${technique.description} Effect ${technique.effect}; power ${technique.power}; energy cost ${technique.energyCost}; mastery ${technique.mastery}%; realm requirement ${technique.requiredRealmId}.")
-                    character != null -> fact("${character.name}: ${character.appearance} ${character.personality}; realm ${character.cultivation.realmId}, stage ${character.cultivation.substage}; health ${character.health}/${character.maxHealth}.")
+                    character != null -> fact("${character.name}: ${character.appearance} ${SceneNarrator.npcActivity(s.copy(player = p, adventure = a), a.npcs.first { it.character.id == character.id })}")
+                    action.target == "noticeboard" -> {
+                        require(a.locationId == "village") { "There is no sect recruitment notice here. Visit the village noticeboard." }
+                        val sect = a.factions.firstOrNull { it.id == "azure" } ?: throw IllegalArgumentException("No recruitment notice is recorded for this faction.")
+                        fact("The recruitment notice names ${sect.name}. Applicants must reach ${s.realms.first().name} stage 2 or a higher realm and earn 5 sect reputation through service. Applications are presented to Elder Wen; reading the notice does not enrol you.")
+                        if (sect.member) fact("Your membership is already recorded as outer disciple.")
+                    }
                     action.target == "self" -> fact("${p.name}: realm ${p.cultivation.realmId}, stage ${p.cultivation.substage}; progress ${p.cultivation.progress}%; health ${p.health}/${p.maxHealth}; energy ${p.energy}/${p.maxEnergy}; ${p.spiritStones} stones.")
                     else -> {
                         require(action.target.isBlank() || action.target == a.locationId) { "That target is not available to inspect here." }
@@ -189,12 +199,30 @@ class AdventureEngine(private val clock: () -> Long = System::currentTimeMillis)
                     }
                 }
             }
+            ActionKind.SENSE -> {
+                val n = npc(action.target)
+                require(s.rules.godMode || p.energy >= 3) { "Spiritual-sense examination costs 3 energy." }
+                if (!s.rules.godMode) p = p.copy(energy = p.energy - 3)
+                val gap = s.realms.indexOfFirst { it.id == n.character.cultivation.realmId } - s.realms.indexOfFirst { it.id == p.cultivation.realmId }
+                val chance = (45 + (p.attributes.spiritualSense - n.character.attributes.soulStrength) / 2 + p.attributes.comprehension / 10 - gap * 12).coerceIn(5, 90)
+                val roll = rng.nextInt(100)
+                calculations += "Spiritual-sense roll $roll; success below $chance. Cost ${if (s.rules.godMode) 0 else 3} energy, 1 hour. Hidden traits, thoughts, possessions and memories remain undisclosed."
+                if (roll < chance) fact("Your examination distinguishes ${n.character.name}'s outward cultivation aura: ${s.realms.first { it.id == n.character.cultivation.realmId }.name}, stage ${n.character.cultivation.substage}. It reveals neither hidden abilities nor private thoughts.")
+                else fact("${n.character.name}'s spiritual aura does not resolve clearly under your examination. No cultivation level or hidden information has been learned.")
+                if (n.character.attributes.spiritualSense >= p.attributes.spiritualSense) {
+                    updateNpc(remember(n, "${p.name} examined my aura using spiritual sense.", -1))
+                    fact("${n.character.name} glances toward the probe; the intrusion was noticed and their opinion falls by 1.")
+                }
+                elapsed = 1
+            }
             ActionKind.TRAVEL -> {
                 val dest = a.locations.firstOrNull { it.id == action.target } ?: throw IllegalArgumentException("Unknown destination. Inspect the map for valid locations.")
                 require(dest.id != a.locationId) { "You are already there." }
                 require(s.rules.godMode || (dest.discovered && dest.id in neighbors(a.locationId))) { "That destination is undiscovered or not adjacent. Follow the roads shown on the map." }
-                a = a.copy(locationId = dest.id); s = s.copy(world = s.world.copy(currentLocation = dest.name)); elapsed = 2
-                fact("You travel to ${dest.name}. ${dest.description}")
+                val origin = s.world.currentLocation
+                a = a.copy(locationId = dest.id, visits = a.visits + (dest.id to ((a.visits[dest.id] ?: 0) + 1)))
+                s = s.copy(world = s.world.copy(currentLocation = dest.name)); elapsed = 2
+                fact("You travel from $origin to ${dest.name}, taking 2 in-game hours along the validated route${if (s.rules.godMode) " (sandbox travel permissions enabled)" else ""}.")
             }
             ActionKind.INVESTIGATE -> {
                 elapsed = 1
@@ -220,11 +248,27 @@ class AdventureEngine(private val clock: () -> Long = System::currentTimeMillis)
             ActionKind.TALK -> {
                 val n = npc(action.target); elapsed = 1
                 val query = action.detail.lowercase()
-                val words = query.split(Regex("\\W+")).filter { it.length > 3 }
-                val known = n.knowledge.firstOrNull { k -> words.any { k.contains(it, true) } }
-                val answer = known ?: if (query.isBlank() || query in listOf("hello", "greetings")) n.goal else "I have no established knowledge about that. ${n.goal}"
-                fact("${n.character.name} (${n.character.personality}; opinion ${n.relationship}): $answer")
-                updateNpc(remember(n, "${p.name} said: ${action.detail.take(600)}. Response: $answer"))
+                val words = query.split(Regex("\\W+")).filter { it.length > 3 }.toMutableList()
+                if (words.any { it in listOf("resources", "supplies", "medicine", "medicinal", "gathering", "herbs") }) words += listOf("Dewleaf", "spring")
+                val known = if (n.relationship <= -25) null else n.knowledge.firstOrNull { k -> words.any { k.contains(it, true) } }
+                val answer = when {
+                    n.relationship <= -25 -> "I am not willing to discuss that with you."
+                    known != null -> when (n.role) {
+                        "merchant" -> "For something useful rather than a rumour, remember this: $known"
+                        "elder" -> "Attend to what can be established. $known"
+                        "scout" -> "Keep your bearings on the trail. $known"
+                        else -> known
+                    }
+                    else -> when (n.role) {
+                        "merchant" -> "I cannot vouch for that. Ask me about gathering herbs, or look over the medicines I actually have."
+                        "elder" -> "I have no reliable answer on that matter. The posted recruitment requirements and my survey request are another matter."
+                        "scout" -> "I have not learned anything reliable about that. I can speak of the trail and the spring."
+                        else -> "I do not know enough about that to give you an honest answer."
+                    }
+                }
+                dialogue = "${n.character.name}: “$answer”"
+                fact(dialogue)
+                updateNpc(remember(n, "${p.name}'s words: ${action.detail.take(600)}. Response: $answer"))
                 if (known?.contains("Moonfall", true) == true) { revealRuins(); fact("The Moonfall route is marked on your map.") }
             }
             ActionKind.NEGOTIATE -> {
@@ -276,7 +320,7 @@ class AdventureEngine(private val clock: () -> Long = System::currentTimeMillis)
                 npc("wen")
                 val f = a.factions.firstOrNull { it.id == action.target } ?: throw IllegalArgumentException("Unknown faction.")
                 require(!f.member) { "You already belong to this faction." }
-                require(s.rules.godMode || ((s.realms.indexOfFirst { it.id == p.cultivation.realmId } > 0 || p.cultivation.substage >= 2) && f.reputation >= 5)) { "Elder Wen requires Qi Refining stage 2 or higher and 5 sect reputation. Complete a local quest to prove service." }
+                require(s.rules.godMode || ((s.realms.indexOfFirst { it.id == p.cultivation.realmId } > 0 || p.cultivation.substage >= 2) && f.reputation >= 5)) { "Elder Wen requires ${s.realms.first().name} stage 2 or higher and 5 sect reputation. Complete a local quest to prove service." }
                 a = a.copy(factions = a.factions.map { if (it.id == f.id) it.copy(member = true) else it }); elapsed = 1; fact("You join ${f.name} as an outer disciple, by your explicit request.")
             }
             ActionKind.CHALLENGE -> {
@@ -354,7 +398,7 @@ class AdventureEngine(private val clock: () -> Long = System::currentTimeMillis)
         if (elapsed > 0) calculations += "World time +$elapsed hour(s); background simulation +$simElapsed hour(s)."
         val events = (facts + developments).mapIndexed { index, text -> WorldEvent("event_${a.sequence}_$index", s.world.day, a.hour, text.take(2000)) }
         a = a.copy(events = (a.events + events).takeLast(200))
-        return EngineResult(SaveValidator.validate(s.copy(player = p, adventure = a, randomState = rng.state)), facts + developments, calculations)
+        return EngineResult(SaveValidator.validate(s.copy(player = p, adventure = a, randomState = rng.state)), facts + developments, calculations, dialogue)
     }
 
     companion object {

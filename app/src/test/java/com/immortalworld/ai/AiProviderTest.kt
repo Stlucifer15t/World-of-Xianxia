@@ -79,4 +79,29 @@ class AiProviderTest {
             assertThrows(Exception::class.java) { CompatibleStoryteller.validate(AiConfig(true, endpoint, "model")) }
         }
     }
+    @Test fun sceneBudgetAndPromptSupportGroundedLongFormWithoutPrivateContext() = runBlocking {
+        MockWebServer().use { server ->
+            server.start()
+            for ((pace, budget) in listOf("scene" to 1200, "major" to 1200, "brief" to 650, "dialogue" to 650)) {
+                server.enqueue(MockResponse().setBody(envelope("The river continues to flow.")))
+                provider(server).narrate(context.copy(pace = pace, spokenDialogue = "Mei: Dewleaf grows near water.", recentOpenings = listOf("Avoid this opening.")))
+                val body = JSONObject(server.takeRequest(2, TimeUnit.SECONDS)!!.body.readUtf8())
+                assertEquals(budget, body.getInt("max_tokens"))
+                val messages = body.getJSONArray("messages")
+                val prompt = messages.getJSONObject(0).getString("content")
+                assertTrue(prompt.contains("2–4 substantial")); assertTrue(prompt.contains("Never choose")); assertTrue(prompt.contains("invent no ambush"))
+                val supplied = JSONObject(messages.getJSONObject(1).getString("content"))
+                assertEquals(pace, supplied.getString("pace")); assertTrue(supplied.getString("resolvedNpcDialogue").contains("Mei"))
+            }
+        }
+    }
+    @Test fun proseBudgetAndParagraphConsolidationRemainBounded() {
+        val long = "The road is quiet. ".repeat(200)
+        assertEquals(long.trim(), CompatibleStoryteller.validateNarration(long, emptyList()))
+        assertThrows(IllegalArgumentException::class.java) { CompatibleStoryteller.validateNarration("x".repeat(6001), emptyList()) }
+        val shortLines = List(8) { "A quiet breeze stirs the reeds." }.joinToString("\n\n")
+        assertTrue(StoryText.paragraphs(CompatibleStoryteller.validateNarration(shortLines, emptyList())).size < 5)
+        assertEquals(GameAction(ActionKind.SENSE, "wen"), CompatibleStoryteller.parseAction("""{"kind":"SENSE","target":"wen"}"""))
+    }
+
 }

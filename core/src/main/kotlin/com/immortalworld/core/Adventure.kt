@@ -10,7 +10,8 @@ data class WorldEvent(val id: String, val day: Long, val hour: Int, val text: St
 data class CombatState(val enemy: Character, val npcId: String? = null, val turn: Int = 1, val position: String = "close")
 data class IdlePlan(val activity: String, val method: String, val useHerb: Boolean, val checkpointMillis: Long)
 data class ActionRecord(val id: String, val input: String, val day: Long, val hour: Int,
-    val facts: List<String>, val calculations: List<String>, val narration: String = "", val accepted: Boolean = true)
+    val facts: List<String>, val calculations: List<String>, val narration: String = "", val accepted: Boolean = true,
+    val kind: String = "", val locationId: String = "", val story: String = "", val dialogue: String = "", val sceneContext: String = "")
 data class AdventureState(
     val locationId: String, val hour: Int = 8, val simulationHour: Long = 0, val simulationMode: String = "NORMAL",
     val locations: List<Location>, val npcs: List<Npc>, val factions: List<Faction>, val quests: List<Quest>,
@@ -18,6 +19,7 @@ data class AdventureState(
     val combat: CombatState? = null, val idlePlan: IdlePlan? = null,
     val searchCounts: Map<String, Int> = emptyMap(), val defeated: List<String> = emptyList(),
     val injury: Int = 0, val sequence: Long = 0,
+    val visits: Map<String, Int> = emptyMap(),
 )
 
 object AdventureFactory {
@@ -28,7 +30,7 @@ object AdventureFactory {
             Location("crossing", "Jade River Crossing", "Caravans pause at the ford. The water and tracks offer clues to the surrounding hills."),
             Location("mountain", "Silent Pine Mountain", "A spiritual spring lies beneath ancient pines. Scout Ren patrols the mountain trail.", 1),
             Location("ruins", "Moonfall Ruins", "Broken wards shelter medicinal herbs and ore. A territorial spirit wolf guards the inner courtyard.", 3, false),
-        ).let { known -> if (known.any { it.name == save.world.currentLocation }) known else known +
+        ).map(SceneNarrator::upgradeLocation).let { known -> if (known.any { it.name == save.world.currentLocation }) known else known +
             Location("origin", save.world.currentLocation, "Your starting refuge connects to the roads of the Jade Expanse.") }
         fun npc(id: String, name: String, background: String, personality: String, role: String, goal: String, knowledge: List<String>, location: String): Npc {
             val g = CharacterGenerator.generate(CreationOptions(name = name, age = when (role) { "elder" -> 60; "merchant" -> 33; else -> 24 }, background = background, personality = personality), save.randomState xor id.hashCode().toLong(), id)
@@ -48,6 +50,7 @@ object AdventureFactory {
         )
         return save.copy(adventure = AdventureState(
             locationId = places.first { it.name == save.world.currentLocation }.id, locations = places, npcs = npcs,
+            visits = mapOf(places.first { it.name == save.world.currentLocation }.id to 1),
             factions = listOf(Faction("azure", "Azure Cloud Sect")),
             quests = listOf(Quest("dewleaf", "Medicine for the village", "mei", "Deliver two Dewleaf herbs to Mei."),
                 Quest("survey", "Survey Moonfall", "wen", "Investigate the ruins, then report to Elder Wen.", reward = 24)),
@@ -55,7 +58,7 @@ object AdventureFactory {
     }
 }
 
-enum class ActionKind { OBSERVE, TRAVEL, INVESTIGATE, SEARCH, TALK, NEGOTIATE, BUY, SELL, JOIN, ACCEPT_QUEST, TURN_IN,
+enum class ActionKind { OBSERVE, SENSE, TRAVEL, INVESTIGATE, SEARCH, TALK, NEGOTIATE, BUY, SELL, JOIN, ACCEPT_QUEST, TURN_IN,
     CHALLENGE, ATTACK, TECHNIQUE, DEFEND, DODGE, MOVE, USE_ITEM, EQUIP, RETREAT, REST, ACTIVITY, BREAKTHROUGH, ATTEMPT,
     SIMULATION_MODE, ENABLE_OFFLINE, DISABLE_OFFLINE, CLAIM_OFFLINE }
 

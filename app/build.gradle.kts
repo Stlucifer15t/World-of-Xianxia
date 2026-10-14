@@ -11,8 +11,8 @@ android {
         applicationId = "com.immortalworld"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.2.0-active-adventure"
+        versionCode = 3
+        versionName = "0.3.0-living-story"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true }

@@ -65,7 +65,7 @@ class SaveCodecTest {
         val original = sample()
         val json = JSONObject(SaveCodec.encode(original)).put("version", 1).apply { remove("adventure") }.toString()
         val migrated = SaveCodec.decode(json)
-        assertEquals(2, migrated.version)
+        assertEquals(3, migrated.version)
         assertEquals(original.player, migrated.player); assertEquals(original.world, migrated.world)
         assertEquals(original.randomState, migrated.randomState); assertNull(migrated.adventure)
         val initialized = AdventureFactory.ensure(migrated)
@@ -89,8 +89,64 @@ class SaveCodecTest {
         rejects(root.toString())
     }
     @Test fun versionTwoRequiresItsAdventureField() {
-        val json = JSONObject(SaveCodec.encode(sample())).apply { remove("adventure") }
+        val json = JSONObject(SaveCodec.encode(sample())).put("version", 2).apply { remove("adventure") }
         rejects(json.toString())
+    }
+
+    private fun versionTwo(s: GameSave): JSONObject = JSONObject(SaveCodec.encode(s)).put("version", 2).apply {
+        getJSONObject("adventure").apply {
+            remove("visits")
+            val history = getJSONArray("history")
+            for (i in 0 until history.length()) listOf("kind", "locationId", "story", "dialogue", "sceneContext").forEach { history.getJSONObject(i).remove(it) }
+        }
+    }
+    @Test fun versionTwoMigrationPreservesMechanicsAndOriginalReceipts() {
+        val base = sample().let { it.copy(world = it.world.copy(currentLocation = "Azure Cloud Village")) }
+        val old = AdventureEngine().execute(base, GameAction(ActionKind.TALK, "mei", "Ask Mei about Moonfall"), "Ask Mei about Moonfall", "talk").state
+        val migrated = SaveCodec.decode(versionTwo(old).toString())
+        assertEquals(3, migrated.version)
+        assertEquals(old.player, migrated.player); assertEquals(old.world, migrated.world); assertEquals(old.rules, migrated.rules)
+        assertEquals(old.randomState, migrated.randomState); assertEquals(old.adventure!!.npcs, migrated.adventure!!.npcs)
+        assertEquals(old.adventure!!.quests, migrated.adventure!!.quests); assertEquals(old.adventure!!.events, migrated.adventure!!.events)
+        val receipt = migrated.adventure!!.history.single()
+        assertEquals(old.adventure!!.history.single().facts, receipt.facts); assertEquals("", receipt.story); assertEquals("", receipt.sceneContext)
+        assertEquals(mapOf("village" to 1), migrated.adventure!!.visits)
+        assertEquals(migrated, SaveCodec.decode(SaveCodec.encode(migrated)))
+    }
+    @Test fun versionTwoOnlyUpgradesExactStockDescriptions() {
+        val old = versionTwo(AdventureFactory.ensure(sample()))
+        val locations = old.getJSONObject("adventure").getJSONArray("locations")
+        locations.getJSONObject(0).put("description", "A herbalist's stall faces a sect noticeboard. Mei tends her stock; Elder Wen receives applicants.")
+        locations.getJSONObject(1).put("description", "Custom crossing observatory")
+        val migrated = SaveCodec.decode(old.toString())
+        assertTrue(migrated.adventure!!.locations[0].description.contains("Timber shopfronts"))
+        assertEquals("Custom crossing observatory", migrated.adventure!!.locations[1].description)
+    }
+    @Test fun v3RequiresStoryFieldsWithoutCoercionOrDroppingUnknowns() {
+        val s = AdventureEngine().execute(AdventureFactory.ensure(sample()), GameAction(ActionKind.OBSERVE), "Observe", "look").state
+        for (key in listOf("kind", "locationId", "story", "dialogue", "sceneContext")) {
+            val root = JSONObject(SaveCodec.encode(s)); root.getJSONObject("adventure").getJSONArray("history").getJSONObject(0).remove(key)
+            rejects(root.toString())
+        }
+        val root = JSONObject(SaveCodec.encode(s)); root.getJSONObject("adventure").getJSONArray("history").getJSONObject(0).put("story", 9)
+        rejects(root.toString())
+        val v2 = versionTwo(s); v2.getJSONObject("adventure").put("visits", JSONObject())
+        rejects(v2.toString())
+    }
+    @Test fun rejectsInvalidVisitsAndOversizedStoryFields() {
+        val s = AdventureEngine().execute(AdventureFactory.ensure(sample()), GameAction(ActionKind.OBSERVE), "Observe", "look").state
+        for ((field, size) in listOf("story" to 5001, "dialogue" to 1501, "sceneContext" to 3501, "narration" to 6001)) {
+            val root = JSONObject(SaveCodec.encode(s)); root.getJSONObject("adventure").getJSONArray("history").getJSONObject(0).put(field, "x".repeat(size)); rejects(root.toString())
+        }
+        for ((id, count) in listOf("origin" to -1, "unknown-place" to 1, "origin" to 0)) {
+            val root = JSONObject(SaveCodec.encode(s)); root.getJSONObject("adventure").put("visits", JSONObject().put(id, count)); rejects(root.toString())
+        }
+    }
+    @Test fun longerNarrationAndObservedSnapshotsRoundTrip() {
+        val s = AdventureEngine().execute(AdventureFactory.ensure(sample()), GameAction(ActionKind.OBSERVE), "Observe", "look").state
+        val a = s.adventure!!
+        val enriched = s.copy(adventure = a.copy(history = a.history.map { it.copy(narration = "A quiet road. ".repeat(400)) }))
+        assertEquals(enriched, SaveCodec.decode(SaveCodec.encode(enriched)))
     }
 
 }

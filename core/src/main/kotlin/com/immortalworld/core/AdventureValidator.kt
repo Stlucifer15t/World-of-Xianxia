@@ -27,7 +27,10 @@ object AdventureValidator {
         ids(a.events.map { it.id }, 200); a.events.forEach { text(it.text); require(it.day in 1..s.world.day && it.hour in 0..23) }
         ids(a.history.map { it.id }, 100)
         a.history.forEach {
-            text(it.input); require(it.facts.size in 1..30 && it.calculations.size <= 30 && it.narration.length <= 3000)
+            require(it.kind.isEmpty() || ActionKind.entries.any { kind -> kind.name == it.kind })
+            require(it.locationId.isEmpty() || a.locations.any { loc -> loc.id == it.locationId })
+            require(it.story.length <= 5000 && it.dialogue.length <= 1500 && it.sceneContext.length <= 3500)
+            text(it.input); require(it.facts.size in 1..30 && it.calculations.size <= 30 && it.narration.length <= 6000)
             it.facts.forEach { value -> text(value) }; it.calculations.forEach { value -> text(value) }
             require(it.day in 1..s.world.day && it.hour in 0..23)
         }
@@ -41,6 +44,8 @@ object AdventureValidator {
             require(it.method in Activities.methods || it.method == s.player.cultivation.method)
             require(s.rules.passiveCultivation) { "Offline plan must be explicitly enabled." }
         }
+        require(a.visits.size <= 128)
+        a.visits.forEach { (id, count) -> require(a.locations.any { it.id == id } && count in 1..1_000_000_000) }
         ids(a.defeated, 100); require(a.searchCounts.size <= 128)
         a.searchCounts.forEach { (id, count) -> require(a.locations.any { it.id == id } && count in 0..3) }
     }

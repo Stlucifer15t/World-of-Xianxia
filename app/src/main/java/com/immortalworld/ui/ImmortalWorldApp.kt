@@ -62,7 +62,7 @@ fun ImmortalWorldApp(model: GameViewModel) {
         }
         Scaffold(
             topBar = {
-                CenterAlignedTopAppBar(
+                if (state.screen != Screen.JOURNEY) CenterAlignedTopAppBar(
                     title = { Text("IMMORTAL WORLD", fontSize = 15.sp, letterSpacing = 2.sp, color = Gold) },
                     navigationIcon = { if (state.screen != Screen.HOME) TextButton(onClick = {
                         model.navigate(if (state.active != null && state.screen !in listOf(Screen.CREATE, Screen.JOURNEY)) Screen.JOURNEY else Screen.HOME)
@@ -72,7 +72,7 @@ fun ImmortalWorldApp(model: GameViewModel) {
                 )
             },
             bottomBar = {
-                if (state.active != null && state.screen !in listOf(Screen.HOME, Screen.CREATE, Screen.SETTINGS) && WindowInsets.ime.getBottom(LocalDensity.current) == 0) {
+                if (state.active != null && state.screen !in listOf(Screen.HOME, Screen.CREATE, Screen.SETTINGS, Screen.JOURNEY) && WindowInsets.ime.getBottom(LocalDensity.current) == 0) {
                     NavigationBar(containerColor = Ink) {
                         listOf(Triple(Screen.JOURNEY, "Journey", "◇"), Triple(Screen.STATUS, "Character", "△"), Triple(Screen.SAVES, "Saves", "▤")).forEach { (screen, label, symbol) ->
                             NavigationBarItem(modifier = Modifier.testTag("nav_${screen.name.lowercase()}"), selected = state.screen == screen, onClick = { model.navigate(screen) },

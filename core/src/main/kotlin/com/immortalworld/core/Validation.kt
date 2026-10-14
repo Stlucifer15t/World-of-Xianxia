@@ -5,7 +5,7 @@ object SaveValidator {
     const val MAX_JOURNAL = 200
     fun validate(s: GameSave): GameSave {
         require(s.format == "xianxia-save") { "This is not an Immortal World save." }
-        require(s.version == 2) { "Unsupported save version ${s.version}. Update the application; the original file was not changed." }
+        require(s.version == 3) { "Unsupported save version ${s.version}. Update the application; the original file was not changed." }
         fun text(v: String, label: String, max: Int = 500) {
             require(v.isNotBlank() && v.length <= max && '\u0000' !in v) { "$label must contain 1–$max characters." }
         }

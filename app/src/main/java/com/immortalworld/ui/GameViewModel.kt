@@ -222,7 +222,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (!record.accepted) return
         mutable.update { it.copy(aiWorking = true) }
         try {
-            val prose = CompatibleStoryteller(mutable.value.aiConfig).narrate(ContextBuilder.build(active.save, record.input, record.facts))
+            val prose = CompatibleStoryteller(mutable.value.aiConfig).narrate(ContextBuilder.build(active.save, record.input, record.facts, record))
             withContext(NonCancellable) {
                 val changed = active.save.copy(adventure = active.save.adventure!!.copy(history = active.save.adventure!!.history.map { if (it.id == id) it.copy(narration = prose) else it }))
                 val saved = repository.save(changed, active.revision, "Before AI narration")
