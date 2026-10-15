@@ -4,7 +4,6 @@ package com.immortalworld.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
@@ -77,7 +76,7 @@ internal fun AiSettingsPanel(state: GameUiState, model: GameViewModel) {
         showKey = false
     }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("Setup", "Saved", "Limits", "Knowledge").forEach { name ->
                 FilterChip(selected = tab == name, onClick = { tab = name }, label = { Text(name) }, modifier = Modifier.testTag("ai_tab_$name"))
             }

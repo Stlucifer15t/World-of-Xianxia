@@ -26,7 +26,7 @@ class AiSettingsFlowTest {
     private fun idle() { waitFor { !model.state.value.busy } }
     private fun edit(tag: String, text: String) { compose.onNodeWithTag(tag).performScrollTo().performTextReplacement(text) }
     private fun tab(name: String) {
-        // Reveal the vertical page first, then the independently scrollable tab row.
+        // Reveal the section selector before choosing a tab on a short viewport.
         compose.onNodeWithTag("settings").performScrollToIndex(1)
         compose.onNodeWithTag("ai_tab_$name").performScrollTo().performClick()
     }
