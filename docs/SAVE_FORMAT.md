@@ -169,3 +169,15 @@ Database schema v1 does not change: adventure data is part of the JSON aggregate
 Future schema/format changes still require explicit migrations and fixtures; never
 use destructive Room fallback or silently discard unsupported fields. The original
 v1 example/fixture shape is generated from real codec output in automated tests.
+
+## Opening receipts (app 0.6; portable format remains v3)
+
+A new character can carry a first `ActionRecord` whose ID begins with `opening:`
+and whose `kind` is empty. Existing v3 fields store the visible creation facts,
+starting scene/local fallback and completed AI narration. It is not an engine
+command and does not increment sequence or simulation time. Regeneration changes
+only narration (plus normal revision/backup/timestamp metadata), not character data.
+Recognition survives imported/duplicated slot IDs. Up to 100 story receipts remain:
+the opening, when present, plus the latest 99 ordinary receipts. No credential or
+partial streamed draft enters an export. Older untouched starts need not contain
+an opening receipt; merely loading them never generates one or calls paid AI.

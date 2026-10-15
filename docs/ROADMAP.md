@@ -1,5 +1,14 @@
 # Delivery phases and acceptance gates
 
+## Delivered AI openings and regeneration (0.6)
+
+Character creation now calls the saved enabled AI provider immediately after
+saving a creation snapshot. The opening uses the selected premise and actual
+visible generated traits. Regenerate controls replace only opening/latest-action
+prose; errors/cancellation retain saved state and prior good narration. Loading
+never automatically buys a request. This completes the opening-narration correction,
+not procedural world/mechanical generation. See `TESTING.md` for verification.
+
 ## Cultivation identity and simpler settings (0.5)
 
 Refines the existing native screens, not the engine: a card-based settings hub;

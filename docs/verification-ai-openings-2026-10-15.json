@@ -1,0 +1,112 @@
+{
+  "verified_on": "2026-10-15",
+  "application_version": "0.6.0-ai-openings",
+  "repository": "Stlucifer15t/World-of-Xianxia",
+  "branch": "arena/b0b240be-world-of-xianxia",
+  "code_commit": "b5985ae25a49a09922612d130251e2287bc84747",
+  "run_id": 38671565107,
+  "run_url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38671565107",
+  "conclusion": "success",
+  "unit_tests": {
+    "core": 34,
+    "adventure": 30,
+    "story": 15,
+    "save_codec": 28,
+    "ai_adapter_mock_server": 11,
+    "total": 150,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "ai_upgrade_mock_server_and_fixtures": 20,
+    "custom_api_endpoint_regressions": 7,
+    "opening_snapshots": 5
+  },
+  "emulator_tests": [
+    {
+      "api": 26,
+      "persistence": 17,
+      "compose": 13,
+      "total": 36,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "encrypted_ai_preferences": 6
+    },
+    {
+      "api": 35,
+      "persistence": 17,
+      "compose": 13,
+      "total": 36,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "encrypted_ai_preferences": 6
+    }
+  ],
+  "lint": {
+    "errors": 0,
+    "other_findings": 14
+  },
+  "save_format": {
+    "exports": 3,
+    "imports": [
+      1,
+      2,
+      3
+    ],
+    "room_database_schema": 1,
+    "room_schema_file_sha256": "8a2fa3d84ff99a951ce4ddffebe55999562ab93dcf2312a6db3483999da45d2c"
+  },
+  "apk_artifact": {
+    "id": 11943952691,
+    "name": "immortal-world-debug-apk",
+    "url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38671565107/artifacts/11943952691",
+    "size_in_bytes": 12535446,
+    "archive_sha256": "ddc092df968b47d3ae2ff18bbd6ed136e0f5c61ea31ef2df171c84c08d400397",
+    "digest_source": "GitHub artifact API; archive digest, not an independently measured APK digest"
+  },
+  "verified_additions": [
+    "Automatic create-to-narrator path waits for provider restoration and persists the character before streaming",
+    "Opening context captures all visible creation choices, excludes private data and does not consult later mutable campaign fields",
+    "Actual HTTP/SSE opening request and prompt budgets tested with a local mock server",
+    "Create and regenerate UI controls tested on API 26 and 35 through a controlled narrator dependency",
+    "Failed first generation, invalid replacement, cancellation, late tokens and duplicate submission recovery",
+    "Explicit offline mode makes no narration request; enabling AI permits manual generation",
+    "Cold-start settings restoration, fresh ViewModel load, portable import and independent copy regeneration",
+    "Legacy untouched opening generation is explicit; progressed campaigns never receive invented origins",
+    "Opening and latest-action regeneration preserve RNG, time, character, resources, quests, NPCs and mechanical outcomes",
+    "v3 opening/prose roundtrip and origin retention within the existing bounded history",
+    "All previous endpoint, provider, encryption, Room, save, gameplay and native UI regressions retained"
+  ],
+  "remaining_manual_acceptance": [
+    "Physical-phone install, SAF providers, force-stop, rotation, TalkBack, IME and larger accessibility fonts",
+    "Live compatible AI provider with user-supplied credentials, network recovery and measured response latency",
+    "Live accessible Fandom/MediaWiki/custom-source/SearXNG behavior",
+    "Physical-device Android Keystore and profile review",
+    "Live CrowLLM account access and its actual model catalog with user-owned credentials",
+    "Live opening quality based on selected premise, first-request/regeneration cancellation and lifecycle on a physical phone"
+  ],
+  "not_implemented": [
+    "Full graphical God Mode/world editor",
+    "Large procedural worlds and autonomous NPC plots",
+    "Advanced sect management, group combat and arbitrary generated mechanics",
+    "Production signing",
+    "Native non-chat-completions generation protocols",
+    "Exact per-model tokenizer accounting",
+    "Whole-site crawling or protected-site bypass (intentionally excluded)",
+    "On-device GGUF inference or native Cloudflare account configuration",
+    "Selectable higher-realm creation or independent decorative root-quality mechanics"
+  ],
+  "preview_artifact": {
+    "id": 11943939561,
+    "url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38671565107/artifacts/11943939561",
+    "name": "device-test-reports-api-35"
+  },
+  "version_code": 7,
+  "test_boundaries": {
+    "device_opening_flows": "Controlled narrator injected into GameViewModel; real Room persistence and Compose controls",
+    "provider_wire": "Actual CompatibleStoryteller HTTP and SSE against MockWebServer; no real paid API credentials",
+    "first_failed_run": 38671242269,
+    "first_failure_resolution": "Corrected missing finish_reason=stop in new SSE fixture; no production validation weakened"
+  }
+}

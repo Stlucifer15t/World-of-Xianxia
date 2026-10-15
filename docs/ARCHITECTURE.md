@@ -1,5 +1,41 @@
 # Architecture and authority boundaries
 
+## AI opening and prose-only regeneration (0.6)
+
+`GameViewModel.create()` waits for encrypted provider preferences to finish loading,
+uses the existing seeded generator, and atomically persists/activates the character
+with `OpeningScene.attach()` before calling the real compatible storyteller. There
+is no synthetic OBSERVE command: the opening consumes no time, RNG or resources,
+and does not advance the engine sequence, NPCs, quests or relationships.
+
+`OpeningScene` records bounded visible creation facts and an observed-scene/local
+fallback snapshot in the existing v3 `ActionRecord` fields. A reserved `opening:`
+ID prefix with empty action kind identifies this receipt across import/duplicate;
+recognition does not depend on the new slot ID. No Room or portable schema migration
+is needed. History keeps the opening plus the latest 99 ordinary receipts within
+its existing 100-record limit. Existing event/memory retention is unchanged.
+
+The opening context is built solely from that receipt, not the mutable campaign.
+It contains no hidden traits, private journal entries, NPC goals or unspoken
+knowledge. `pace=opening` asks for a substantial original beginning grounded in
+selections rather than a mechanical recap. The actual saved mechanics and player
+agency remain authoritative. The existing provider adapter, endpoint resolver,
+streaming transport, bounds and optional reference lookup are reused.
+
+Regeneration targets only the latest accepted receipt. Before an action this is
+**Regenerate opening**; afterwards it is **Regenerate response**. A legacy untouched
+start may explicitly attach its missing opening before requesting prose; loading
+alone never makes a paid request. Dirty edits require save/discard first. Busy
+requests cannot be submitted twice. Streaming previews are transient and guarded
+by the request job; cancelled jobs cannot inject late tokens into another attempt.
+Only a completed, validated response replaces narration through revision-checked
+repository persistence. Errors/cancellation leave the last good response untouched.
+
+The one-Application ViewModel constructor remains available for Android's factory.
+A defaulted narrator dependency permits deterministic lifecycle/UI tests; production
+still calls `CompatibleStoryteller.narrateStreaming`. Wire tests independently
+exercise actual HTTP payloads, SSE completion, authentication and response guards.
+
 ## Custom API URL correction (0.5.1)
 
 `AiEndpoints` is the shared, pure resolver used by validation, `ModelDiscovery`

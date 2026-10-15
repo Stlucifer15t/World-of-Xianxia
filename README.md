@@ -4,11 +4,11 @@ Native Kotlin/Jetpack Compose xianxia RPG with a **story-first, player-controlle
 adventure**, an authoritative offline game engine, optional AI narration, and
 portable saves. This extends the tested Phase 1 app rather than replacing it.
 
-**Verified build:** 0.5.1 custom API fix, code commit `6b17b05`.
+**Verified build:** 0.6.0 AI openings, code commit `b5985ae`.
 
-[Download the tested APK (ZIP)](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38669338351/artifacts/11942359378) · [Successful build and tests](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38669338351)
+[Download the tested APK (ZIP)](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38671565107/artifacts/11943952691) · [Successful build and tests](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38671565107)
 
-143 unit tests and 28 device tests on **each** of API 26/API 35 passed. Lint has
+150 unit tests and 36 device tests on **each** of API 26/API 35 passed. Lint has
 zero errors and 14 non-error findings. Extract `app-debug.apk` from the ZIP.
 GitHub may require sign-in. **Read the save-export warning below before installing.**
 
@@ -20,6 +20,23 @@ that deletes private saves. Export first, install the new APK, then import the
 `.xianxia.json`. Version-1 and version-2 saves migrate to v3 without rerolling the player,
 resetting the adventure, or deleting the journal. Keep the original export if
 you may need to return to an older app; older apps do not read v3 exports. Do not uninstall without an external save copy.
+
+## AI-generated beginnings & regeneration (0.6)
+
+- With **Use AI storytelling** enabled in the saved provider profile, **Begin journey
+  & create save** now saves your character and immediately requests an AI opening.
+  No first action is needed to trigger the provider.
+- The opening uses the actual saved identity, appearance, background, personality,
+  birthplace, spiritual foundation, abilities, possessions, location and scenario.
+  The AI writes prose; it cannot reroll your character or invent mechanical rewards.
+- **Regenerate opening** replaces that opening before your first action. After an
+  action, **Regenerate response** rewrites the latest accepted result without
+  replaying it. Each explicit request may incur provider charges.
+- Failed/cancelled requests preserve the character and previous good prose. A
+  clearly labeled local opening remains available when no AI response is saved.
+  Explicit offline mode still works without a key.
+- Reloading, importing or copying a campaign does **not** auto-generate or spend
+  tokens. Untouched older starts offer **Generate AI opening** explicitly.
 
 ## Custom API fix (0.5.1)
 

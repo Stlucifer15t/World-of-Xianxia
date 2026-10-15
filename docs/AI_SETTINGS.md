@@ -43,6 +43,38 @@ controls. Tabs retain the current form; leaving this page discards unsaved edits
 action or automatically retry a paid completion. No API credentials are supplied
 with the app; provider calls may incur charges.
 
+## Your first AI opening and regenerate controls (0.6)
+
+Save an enabled provider profile **before creating the character**. After you press
+**Begin journey & create save**, the character and creation snapshot are committed
+first, then that provider receives one opening request. You do not have to submit
+an action to begin AI storytelling. The creator discloses whether AI or offline
+mode is active, and the Journey screen shows writing/streaming status and cancel.
+
+The prompt includes the saved identity, appearance, birthplace, background,
+personality, root, constitution, bloodline, revealed talents/potential, actual
+cultivation/arts/possessions, difficulty, location and starting circumstances.
+Hidden traits, private notes and NPC secrets are excluded. Scenario text provides
+story framing, not permission to grant extra powers or change the saved world.
+
+- Before taking an action, **Regenerate opening** requests a fresh version from the
+  same saved premise. **Generate AI opening** appears if no valid AI version exists.
+- After an accepted action, **Regenerate response** rewrites its prose only. It does
+  not advance time, spend items, reroll damage, repeat rewards or play a second turn.
+- A failed, malformed, rejected or cancelled response does not replace good prose.
+  If none exists yet, the local opening is clearly labeled. Retry is explicit.
+- The control is disabled while a request runs. **Cancel AI request** stops it;
+  no partial text is committed. Save or discard any pending edits before retrying.
+- Reloading, importing, duplicating or reconnecting never automatically regenerates
+  a story. Existing untouched starts can opt in with **Generate AI opening**.
+- With AI disabled, creation is local and makes no narration request. Enable and
+  save a provider later to generate the opening while it is still the latest entry.
+
+Each initial AI generation or regeneration may incur provider charges. Keep the
+provider model/key valid; model catalog success alone does not guarantee generation
+access. This is AI prose over engine-owned state, not AI-generated mechanical rules,
+new maps, items or autonomous NPC plots. A provider's writing quality still varies.
+
 ## Roadmap continuation: named provider profiles
 
 The Phase 3 request-profile feature is exposed under **Saved** in the provider
@@ -118,7 +150,7 @@ APIs expose **no** context capacity; this is shown as unknown rather than invent
 - **Maximum output · tokens** is separate (1–16,000, smaller than the context
   window). It is an upper ceiling, not a command to generate that many tokens.
 - Existing task pacing remains: up to 500 output tokens for interpretation, 650
-  for brief narration and 1,200 for scenes, capped by the configured maximum and
+  for brief narration and 1,200 for openings/scenes, capped by the configured maximum and
   a known provider output ceiling. Saved narration remains capped at 6,000 chars.
 
 A larger context number does not upload the full save or all campaign history.

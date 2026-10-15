@@ -1,6 +1,64 @@
 # Immortal World verification and device acceptance
 
-## Current custom-API fix — 2026-10-15
+## Current AI opening / regeneration build — 2026-10-15
+
+[Run 38671565107](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38671565107) passed for code commit
+`b5985ae25a49a09922612d130251e2287bc84747` (version **0.6.0-ai-openings**, version code 7).
+[Download the tested APK ZIP](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38671565107/artifacts/11943952691).
+
+| Check | Actual result |
+|---|---|
+| Build / debug APK | Passed, uploaded |
+| Unit tests | **150 passed; 0 failures/errors/skips** |
+| API 26 instrumentation | **36 passed; 0 failures/errors/skips** |
+| API 35 instrumentation | **36 passed; 0 failures/errors/skips** |
+| Lint | 0 errors; 14 non-error findings |
+| Campaign / Room schemas | v3 / v1, unchanged |
+
+Seven new unit cases cover read-only/idempotent opening snapshots, all visible
+creation selections and privacy exclusions, immutable historical context, refusing
+invented starts for progressed campaigns, bounded origin retention, portable v3
+roundtrip, and the actual HTTP/SSE opening payload. Existing prompt-budget coverage
+also checks opening pacing. The first CI attempt found a missing completion marker
+in the new SSE test fixture; that fixture was corrected, and the complete suite
+was rerun successfully. Production stream-completeness checks were not weakened.
+
+Eight new device flows run on **each** emulator:
+
+1. The create button calls narration after durable save, passes the selected
+   background/scenario/root, and regenerates only prose.
+2. First-request failure preserves a saved local opening and supports explicit retry.
+3. Invalid/cancelled replacement preserves good prose; late tokens are ignored and
+   duplicate submission is blocked.
+4. Explicit offline creation calls no narrator, then supports generation when enabled.
+5. Cold creation waits for saved provider configuration; fresh ViewModel load,
+   import and duplicate never automatically request narration. Copy regeneration
+   leaves the original slot unchanged.
+6. A legacy untouched start offers explicit generation without an automatic call.
+7. Cancelling the first opening preserves the character; reload never retries for you.
+8. Latest-action regeneration does not replay time, resources or any engine result.
+
+The new device tests inject a controlled narrator at the ViewModel boundary;
+separate mock-server tests exercise the **real** provider adapter, request payload
+and stream validation. This is not a claim of live paid-provider account testing
+or a guarantee of a model's literary quality. Existing Room, encryption, endpoint,
+settings, cultivation UI, accessibility-layout and gameplay regressions also pass.
+
+Machine-readable evidence: `verification-ai-openings-2026-10-15.json`.
+GitHub reports the APK ZIP SHA-256 as `ddc092df968b47d3ae2ff18bbd6ed136e0f5c61ea31ef2df171c84c08d400397`;
+this is an archive digest, not an independently measured APK hash. Export saves
+before any uninstall required by debug signing differences. Keys remain device-only.
+
+### Phone / live-provider acceptance still needed
+
+Enable a saved provider with your own key; create two characters with different
+backgrounds, appearance and scenarios. Confirm generation begins without an action
+and that the prose reflects each premise. Regenerate a poor response, cancel a
+slow request, test airplane mode, rotate and force-stop/relaunch. Inspect that
+stats, inventory, clock and location stay fixed. Test large text/TalkBack and real
+SAF exports on your phone. These checks complement—not replace—the automated suites.
+
+## Previously verified custom-API fix — 2026-10-15
 
 [Run 38669338351](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38669338351) passed for code commit
 `6b17b05b45e26cce6b8917c27c17c6acf00c3337` (version **0.5.1-custom-api**, version code 6).
