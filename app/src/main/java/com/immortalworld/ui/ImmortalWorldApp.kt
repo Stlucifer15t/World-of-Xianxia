@@ -225,9 +225,11 @@ private fun Creator(state: GameUiState, model: GameViewModel) {
             Text("Generated once from this character's seed. Opening a section never rerolls your traits.", style = MaterialTheme.typography.bodySmall)
             OutlinedButton(onClick = model::randomize, modifier = Modifier.fillMaxWidth()) { Text("Randomize character & potential") }
         } }
-        item { RecordSection("Identity and Appearance", o.name, "◇", initiallyOpen = true) {
+        item { Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Field("Campaign name", saveName, 80) { saveName = it }
             Field("Character name", o.name, 60) { model.draft(o.copy(name = it)) }
+        } }
+        item { RecordSection("Identity and Appearance", "${o.race} · Age ${o.age} · ${o.gender}", "◇") {
             Field("Gender (customizable)", o.gender, 80) { model.draft(o.copy(gender = it)) }
             OutlinedTextField(value = ageText, onValueChange = { value ->
                 if (value.length <= 3 && value.all(Char::isDigit)) { ageText = value; model.draft(o.copy(age = value.toIntOrNull() ?: 0)) }

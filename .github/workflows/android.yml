@@ -68,10 +68,7 @@ jobs:
           api-level: ${{ matrix.api }}
           arch: x86_64
           disable-animations: true
-          script: |
-            ./scripts/ci-run.sh ./gradlew :app:connectedDebugAndroidTest --stacktrace --console=plain
-            mkdir -p app/build/outputs/ui-previews
-            adb pull /sdcard/Android/data/com.immortalworld/files/ui-previews/. app/build/outputs/ui-previews/
+          script: bash scripts/ci-device-tests.sh
       - name: Publish bounded UI previews
         if: always() && matrix.api == 35
         run: python3 scripts/ci-ui-previews.py

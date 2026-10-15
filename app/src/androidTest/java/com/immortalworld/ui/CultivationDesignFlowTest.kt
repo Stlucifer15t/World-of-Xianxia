@@ -1,6 +1,8 @@
 package com.immortalworld.ui
 
 import android.graphics.Bitmap
+import android.os.ParcelFileDescriptor
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.CompositionLocalProvider
@@ -29,9 +31,13 @@ class CultivationDesignFlowTest {
     private fun shot(name: String) {
         compose.waitForIdle()
         val image = compose.onRoot().captureToImage().asAndroidBitmap()
-        val directory = File(compose.activity.getExternalFilesDir(null), "ui-previews").apply { mkdirs() }
+        val directory = File(compose.activity.filesDir, "ui-previews").apply { mkdirs() }
         val small = Bitmap.createScaledBitmap(image, 420, (image.height * 420f / image.width).toInt(), true)
         File(directory, "$name.jpg").outputStream().use { small.compress(Bitmap.CompressFormat.JPEG, 72, it) }
+        // AGP removes app data after tests. Copy test-only previews as shell before that cleanup.
+        val command = "sh -c 'mkdir -p /data/local/tmp/immortal-world-previews && run-as com.immortalworld cat files/ui-previews/$name.jpg > /data/local/tmp/immortal-world-previews/$name.jpg'"
+        val descriptor = InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(command)
+        ParcelFileDescriptor.AutoCloseInputStream(descriptor).use { it.readBytes() }
     }
     @Test fun narrowCultivationRecordsAndSettingsNavigationPreserveEngineData() {
         lateinit var model: GameViewModel
@@ -81,12 +87,14 @@ class CultivationDesignFlowTest {
             compose.onNodeWithTag("settings_saves").performScrollTo().performClick()
             compose.onNodeWithTag("settings").performScrollToNode(hasText("Automatic journal saving"))
             compose.onNodeWithText("Automatic journal saving").assertExists()
+            compose.onNodeWithTag("settings").performScrollToIndex(0)
             compose.onNodeWithTag("settings_home").performScrollTo().performClick()
             compose.onNodeWithTag("settings_ai").performScrollTo().performClick()
             compose.onNodeWithTag("settings").performScrollToNode(hasTestTag("choose_provider"))
             compose.onNodeWithTag("choose_provider").performScrollTo().performClick()
             compose.onNodeWithText("Google Gemini").performClick()
             shot("provider-setup")
+            compose.onNodeWithTag("settings").performScrollToIndex(0)
             compose.onNodeWithTag("settings_home").performScrollTo().performClick()
             compose.onNodeWithTag("settings_about").performScrollTo().performClick()
             compose.onNodeWithTag("settings").performScrollToNode(hasText("Your choices. The world's rules."))
