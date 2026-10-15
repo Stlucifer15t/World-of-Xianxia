@@ -37,6 +37,8 @@ class AiSettingsFlowTest {
         idle()
         compose.runOnUiThread { model.navigate(Screen.SETTINGS) }
         compose.onNodeWithTag("settings").assertExists()
+        // LazyColumn has not composed the AI item while the general settings are on screen.
+        compose.onNodeWithTag("settings").performScrollToNode(hasTestTag("ai_model"))
     }
     @After fun restore() {
         if (!::app.isInitialized || originalId == null) return

@@ -120,6 +120,9 @@ class AiUpgradeTest {
         val c = AiConfig(endpoint = "https://example.com/v1/chat/completions", model = "m", apiKey = "SECRET_KEY", contextTokens = 1_000_000, maxOutputTokens = 1200)
         CompatibleStoryteller.validate(c)
         assertFalse(c.toString().contains("SECRET_KEY"))
+        val unsafe = "SECRET_KEY_\u0001"
+        val error = assertThrows(IllegalArgumentException::class.java) { CompatibleStoryteller.validate(c.copy(apiKey = unsafe)) }
+        assertFalse(error.message.orEmpty().contains("SECRET_KEY"))
         assertThrows(Exception::class.java) { CompatibleStoryteller.validate(c.copy(contextTokens = 1000)) }
         assertThrows(Exception::class.java) { CompatibleStoryteller.validate(c.copy(maxOutputTokens = 20000)) }
     }

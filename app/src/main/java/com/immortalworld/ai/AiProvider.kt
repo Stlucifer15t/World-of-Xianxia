@@ -33,7 +33,7 @@ class CompatibleStoryteller(private val config: AiConfig,
             require(!config.knowledgeEnabled || config.sources.isNotEmpty() || config.searchEndpoint.isNotBlank()) { "Add a public knowledge source or search endpoint, or disable reference lookups." }
             config.sources.forEach { PublicWeb.url(it, allowHttp) }
             if (config.searchEndpoint.isNotBlank()) PublicWeb.url(config.searchEndpoint, allowHttp, allowQuery = false)
-            require(config.apiKey.length <= 1000 && '\n' !in config.apiKey && '\r' !in config.apiKey)
+            require(config.apiKey.length <= 1000 && config.apiKey.all { it.code in 33..126 }) { "API keys must contain only visible ASCII characters, without whitespace or line breaks." }
             require(config.temperature.isFinite() && config.temperature in 0.0..2.0)
         }
         internal fun boundedObject(text: String): JSONObject {

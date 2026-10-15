@@ -104,6 +104,7 @@ class AiPreferences(context: Context, private val store: DataStore<Preferences> 
                 .put("maxOutputTokens", c.maxOutputTokens).put("knowledgeEnabled", c.knowledgeEnabled).put("sources", JSONArray(c.sources)).put("searchEndpoint", c.searchEndpoint)
         })
         val json = JSONObject().put("version", 1).put("activeId", profiles.activeId).put("profiles", array).toString()
+        require(json.length <= 100_000) { "Provider settings are too large. Shorten source URLs; no saved profiles were changed." }
         store.edit {
             it[profilesKey] = json
             // Legacy single-profile values are removed only after successful, atomic replacement.
@@ -111,11 +112,13 @@ class AiPreferences(context: Context, private val store: DataStore<Preferences> 
             it.remove(booleanPreferencesKey("enabled")); it.remove(doublePreferencesKey("temperature"))
         }
     }
-    suspend fun save(config: AiConfig): AiProfileStore = withContext(Dispatchers.IO) { lock.withLock {
+    suspend fun save(config: AiConfig, profileId: String? = null): AiProfileStore = withContext(Dispatchers.IO) { lock.withLock {
         validateStored(config)
         val current = read()
-        val remaining = current.unreadableIds - current.activeId
-        val next = current.copy(profiles = current.profiles.map { if (it.id == current.activeId) it.copy(config = config) else it },
+        val targetId = profileId ?: current.activeId
+        require(current.profiles.any { it.id == targetId }) { "This provider profile no longer exists. No other profile was overwritten." }
+        val remaining = current.unreadableIds - targetId
+        val next = current.copy(activeId = targetId, profiles = current.profiles.map { if (it.id == targetId) it.copy(config = config) else it },
             unreadableIds = remaining, warning = current.warning.takeIf { remaining.isNotEmpty() })
         write(next); next
     } }

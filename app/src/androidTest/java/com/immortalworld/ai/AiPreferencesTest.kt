@@ -68,6 +68,9 @@ class AiPreferencesTest {
         val first = prefs.save(sample("first-secret"))
         val second = prefs.add("Second", sample("second-secret").copy(model = "other-model"))
         assertEquals(2, second.profiles.size)
+        // Another window may have changed the global selection; save is bound to the edited profile ID.
+        prefs.save(sample("first-secret"), first.activeId)
+        assertEquals("second-secret", prefs.loadProfiles().profiles.first { it.id == second.activeId }.config.apiKey)
         prefs.select(first.activeId)
         assertEquals("first-secret", prefs.load().apiKey)
         assertEquals(first.activeId, AiPreferences(context, store, alias).loadProfiles().activeId)

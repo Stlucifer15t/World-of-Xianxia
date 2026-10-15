@@ -46,18 +46,25 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private var lastConnectionCheck = 0L
     private val knowledge = KnowledgeService()
     private val connectivity = application.getSystemService(ConnectivityManager::class.java)
+    private var validatedNetwork: Network? = null
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
-            if (!capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) return
+            val validated = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
             viewModelScope.launch {
-                if (!mutable.value.aiReady || !mutable.value.aiConfig.enabled || !mutable.value.aiConfig.autoConnect || mutable.value.catalogLoading) return@launch
+                if (!validated) { if (validatedNetwork == network) validatedNetwork = null; return@launch }
+                if (validatedNetwork == network) return@launch // Not a new connection; avoid polling on signal/bandwidth updates.
+                validatedNetwork = network
+                if (!mutable.value.aiReady || !mutable.value.aiConfig.enabled || !mutable.value.aiConfig.autoConnect) return@launch
                 if (mutable.value.aiConnection.startsWith("Ready") || reconnectJob?.isActive == true) return@launch
                 reconnectJob = viewModelScope.launch {
                     delay((30_000L - (SystemClock.elapsedRealtime() - lastConnectionCheck)).coerceAtLeast(0))
-                    val current = mutable.value.aiConfig
-                    if (current.enabled && current.autoConnect) detectModels(current)
+                    val state = mutable.value; val current = state.aiConfig
+                    if (current.enabled && current.autoConnect && !state.catalogLoading && !state.aiConnection.startsWith("Ready")) detectModels(current)
                 }
             }
+        }
+        override fun onLost(network: Network) {
+            viewModelScope.launch { if (validatedNetwork == network) validatedNetwork = null }
         }
     }
     init {
@@ -234,7 +241,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun dismissProposal() { mutable.update { it.copy(pendingAction = null) } }
     fun configureAi(config: AiConfig) = task {
         require(mutable.value.aiReady) { "Wait for saved provider settings to load." }
-        installProfiles(app.aiPreferences.save(config))
+        installProfiles(app.aiPreferences.save(config, mutable.value.activeProfileId))
         mutable.update { it.copy(notice = "Provider settings saved on this device. API keys never enter campaign saves.") }
     }
     fun addAiProfile(name: String, config: AiConfig) = task {

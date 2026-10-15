@@ -25,7 +25,7 @@ internal fun AiSettingsPanel(state: GameUiState, model: GameViewModel) {
     var sourceText by remember(state.aiConfig, state.activeProfileId) { mutableStateOf(state.aiConfig.sources.joinToString("\n")) }
     var knowledgeExpanded by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
-    val catalog = model.catalogFor(draft)
+    val catalog = model.catalogFor(draft.copy(apiKey = draft.apiKey.trim()))
     var profilesExpanded by rememberSaveable { mutableStateOf(false) }
     val activeProfile = state.aiProfiles.firstOrNull { it.id == state.activeProfileId }
     var profileName by remember(state.activeProfileId, activeProfile?.name) { mutableStateOf(activeProfile?.name.orEmpty()) }
@@ -36,7 +36,7 @@ internal fun AiSettingsPanel(state: GameUiState, model: GameViewModel) {
     LaunchedEffect(selected, draft.manualContext, draft.model, draft.endpoint) {
         if (!draft.manualContext) context = (selected?.contextTokens ?: if (draft.model == state.aiConfig.model && draft.endpoint == state.aiConfig.endpoint) state.aiConfig.contextTokens else 32768).toString()
     }
-    val config = draft.copy(contextTokens = context.toIntOrNull() ?: 0, maxOutputTokens = output.toIntOrNull() ?: 0,
+    val config = draft.copy(apiKey = draft.apiKey.trim(), contextTokens = context.toIntOrNull() ?: 0, maxOutputTokens = output.toIntOrNull() ?: 0,
         temperature = temperature.toDoubleOrNull() ?: Double.NaN, sources = sourceText.lines().map(String::trim).filter(String::isNotEmpty).distinct())
     fun endpoint(value: String) {
         val old = draft.endpoint.toHttpUrlOrNull(); val next = value.toHttpUrlOrNull()
