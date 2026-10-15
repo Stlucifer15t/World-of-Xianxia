@@ -35,9 +35,6 @@ import com.immortalworld.data.*
 import java.text.DateFormat
 import java.util.Date
 
-private val Jade = Color(0xFF91D3BF)
-private val Gold = Color(0xFFE3C88F)
-private val Ink = Color(0xFF101D20)
 private val Palette = darkColorScheme(
     primary = Jade, onPrimary = Color(0xFF0B372D), secondary = Gold,
     background = Ink, surface = Color(0xFF17282B), surfaceVariant = Color(0xFF23373A),
@@ -49,6 +46,11 @@ private val Palette = darkColorScheme(
 fun ImmortalWorldApp(model: GameViewModel) {
     val state by model.state.collectAsStateWithLifecycle()
     val screenState = rememberSaveableStateHolder()
+    var settingsPage by rememberSaveable { mutableStateOf<String?>(null) }
+    fun goBack() {
+        if (state.screen == Screen.SETTINGS && settingsPage != null) settingsPage = null
+        else model.navigate(if (state.active != null && state.screen !in listOf(Screen.CREATE, Screen.JOURNEY)) Screen.JOURNEY else Screen.HOME)
+    }
     var exportId by rememberSaveable { mutableStateOf<String?>(null) }
     val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(model::importSave) }
     val exportPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -56,16 +58,22 @@ fun ImmortalWorldApp(model: GameViewModel) {
         if (uri != null && id != null) model.exportSave(uri, id)
         exportId = null
     }
-    MaterialTheme(colorScheme = Palette) {
+    MaterialTheme(colorScheme = Palette, typography = Typography().let { t ->
+        t.copy(bodyLarge = t.bodyLarge.copy(fontFamily = RecordFont), bodyMedium = t.bodyMedium.copy(fontFamily = RecordFont),
+            bodySmall = t.bodySmall.copy(fontFamily = RecordFont), titleLarge = t.titleLarge.copy(fontFamily = ScrollFont),
+            titleMedium = t.titleMedium.copy(fontFamily = RecordFont), titleSmall = t.titleSmall.copy(fontFamily = RecordFont),
+            labelLarge = t.labelLarge.copy(fontFamily = RecordFont), labelMedium = t.labelMedium.copy(fontFamily = RecordFont),
+            labelSmall = t.labelSmall.copy(fontFamily = RecordFont), headlineSmall = t.headlineSmall.copy(fontFamily = ScrollFont))
+    }) {
         BackHandler(enabled = state.screen != Screen.HOME) {
-            model.navigate(if (state.active != null && state.screen !in listOf(Screen.CREATE, Screen.JOURNEY)) Screen.JOURNEY else Screen.HOME)
+            goBack()
         }
         Scaffold(
             topBar = {
                 if (state.screen != Screen.JOURNEY) CenterAlignedTopAppBar(
                     title = { Text("IMMORTAL WORLD", fontSize = 15.sp, letterSpacing = 2.sp, color = Gold) },
                     navigationIcon = { if (state.screen != Screen.HOME) TextButton(onClick = {
-                        model.navigate(if (state.active != null && state.screen !in listOf(Screen.CREATE, Screen.JOURNEY)) Screen.JOURNEY else Screen.HOME)
+                        goBack()
                     }, enabled = !state.busy) { Text("Back") } },
                     actions = { if (state.screen != Screen.SETTINGS) TextButton(onClick = { model.navigate(Screen.SETTINGS) }, enabled = !state.busy) { Text("Settings") } },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Ink),
@@ -131,7 +139,7 @@ fun ImmortalWorldApp(model: GameViewModel) {
                                         val safeName = slot.name.replace(Regex("[^\\p{L}\\p{N} _-]"), "_").take(60)
                                         exportPicker.launch("$safeName.xianxia.json")
                                     })
-                                Screen.SETTINGS -> Settings(state, model)
+                                Screen.SETTINGS -> Settings(state, model, settingsPage) { settingsPage = it }
                             }
                         }
                     }
@@ -173,7 +181,7 @@ private fun Home(state: GameUiState, model: GameViewModel) {
         item {
             Text("THE JADE EXPANSE", color = Jade, letterSpacing = 3.sp, style = MaterialTheme.typography.labelMedium)
             Spacer(Modifier.height(20.dp))
-            Text("A thousand paths.\nOne immortal life.", fontFamily = FontFamily.Serif, fontSize = 38.sp, lineHeight = 44.sp, color = Gold)
+            Text("A thousand paths.\nOne immortal life.", fontFamily = ScrollFont, fontSize = 38.sp, lineHeight = 44.sp, color = Gold)
             Spacer(Modifier.height(16.dp))
             Text("Give your cultivator a name, a past, and a world to call their own.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
         }
@@ -181,7 +189,7 @@ private fun Home(state: GameUiState, model: GameViewModel) {
             Panel {
                 Text("YOUR NEXT CHAPTER", color = Jade, style = MaterialTheme.typography.labelMedium)
                 val latest = state.slots.find { it.id == state.preferences.lastSlot } ?: state.slots.firstOrNull()
-                Text(state.active?.save?.name ?: latest?.name ?: "The path is unwritten", style = MaterialTheme.typography.headlineSmall, fontFamily = FontFamily.Serif)
+                Text(state.active?.save?.name ?: latest?.name ?: "The path is unwritten", style = MaterialTheme.typography.headlineSmall, fontFamily = ScrollFont)
                 if (latest != null) Text("${latest.playerName} · ${latest.realmName} ${latest.substage}", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Button(onClick = model::continueGame, enabled = state.active != null || state.slots.isNotEmpty(), modifier = Modifier.fillMaxWidth()) { Text("Continue journey") }
                 OutlinedButton(onClick = { model.navigate(Screen.CREATE) }, modifier = Modifier.fillMaxWidth()) { Text("Begin a new life") }
@@ -203,51 +211,71 @@ private fun Creator(state: GameUiState, model: GameViewModel) {
     var ageText by rememberSaveable(state.seed) { mutableStateOf(o.age.toString()) }
     val preview = remember(o, state.seed) { runCatching { CharacterGenerator.generate(o, state.seed, "preview").character }.getOrNull() }
     LazyColumn(modifier = Modifier.testTag("creator"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item { Heading("01 / A NEW LIFE", "Who will you become?", "Choose your history. Your attributes and rare traits are generated by the engine, not by an AI.") }
-        item { Button(onClick = model::randomize, modifier = Modifier.fillMaxWidth()) { Text("Randomize character & potential") } }
-        item {
-            Text("Background presets", style = MaterialTheme.typography.titleSmall)
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(CreationCatalog.backgrounds) { background -> FilterChip(selected = o.background == background, onClick = { model.preset(background) }, label = { Text(background) }) }
-            }
-        }
-        item { Field("Campaign name", saveName, 80) { saveName = it } }
-        item { Field("Character name", o.name, 60) { model.draft(o.copy(name = it)) } }
-        item { Field("Gender (customizable)", o.gender, 80) { model.draft(o.copy(gender = it)) } }
-        item {
+        item { Heading("THE FIRST ASCENT", "Who will you become?", "A mortal beginning. A spiritual root. A path beyond the heavens.") }
+        item { Panel {
+            Text("YOUR CULTIVATION FOUNDATION", color = Gold, style = MaterialTheme.typography.labelMedium)
+            if (preview != null) {
+                Text("${preview.spiritualRoot} root · ${preview.potential}", fontFamily = ScrollFont, style = MaterialTheme.typography.titleLarge)
+                Text(preview.constitution, color = Jade)
+                Text("${preview.bloodline} · Qi Refining, Stage 1", style = MaterialTheme.typography.bodySmall)
+            } else Text("Complete your identity to reveal the foundation.")
+            Text("Generated once from this character's seed. Opening a section never rerolls your traits.", style = MaterialTheme.typography.bodySmall)
+            OutlinedButton(onClick = model::randomize, modifier = Modifier.fillMaxWidth()) { Text("Randomize character & potential") }
+        } }
+        item { RecordSection("Identity and Appearance", o.name, "◇", initiallyOpen = true) {
+            Field("Campaign name", saveName, 80) { saveName = it }
+            Field("Character name", o.name, 60) { model.draft(o.copy(name = it)) }
+            Field("Gender (customizable)", o.gender, 80) { model.draft(o.copy(gender = it)) }
             OutlinedTextField(value = ageText, onValueChange = { value ->
-                if (value.length <= 3 && value.all(Char::isDigit)) {
-                    ageText = value; model.draft(o.copy(age = value.toIntOrNull() ?: 0))
-                }
-            }, label = { Text("Starting age · 16–100") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                isError = o.age !in 16..100, modifier = Modifier.fillMaxWidth())
-        }
-        item { Choice("Race preset", o.race, CreationCatalog.races) { model.draft(o.copy(race = it)) } }
-        item { Field("Race or custom species", o.race, 80) { model.draft(o.copy(race = it)) } }
-        item { Field("Appearance", o.appearance, 500, singleLine = false) { model.draft(o.copy(appearance = it)) } }
-        item { Field("Birthplace", o.birthplace, 120) { model.draft(o.copy(birthplace = it)) } }
-        item { Field("Background", o.background, 500) { model.draft(o.copy(background = it)) } }
-        item { Choice("Personality preset", o.personality, CreationCatalog.personalities) { model.draft(o.copy(personality = it)) } }
-        item { Field("Personality", o.personality, 500) { model.draft(o.copy(personality = it)) } }
-        item { Choice("Spiritual root", o.root ?: "Generated", listOf("Generated") + CreationCatalog.roots) { model.draft(o.copy(root = it.takeUnless { it == "Generated" })) } }
-        item { Choice("Starting location", o.location, CreationCatalog.locations) { model.draft(o.copy(location = it)) } }
-        item { Field("Starting circumstances", o.circumstances, 500, singleLine = false) { model.draft(o.copy(circumstances = it)) } }
-        item { Choice("Difficulty", o.difficulty, CreationCatalog.difficulties) { model.draft(o.copy(difficulty = it)) } }
-        item {
-            Panel {
-                Text("YOUR INNATE FOUNDATION", color = Gold, style = MaterialTheme.typography.labelLarge)
-                if (preview != null) {
-                    Text("${preview.potential} potential · ${preview.spiritualRoot} root", style = MaterialTheme.typography.titleMedium)
-                    Text("${preview.constitution}\n${preview.bloodline}")
-                    Text("Talent ${preview.attributes.talent} · Comprehension ${preview.attributes.comprehension} · Vitality ${preview.attributes.vitality}")
-                    Text("Qi Refining · Stage 1 · ${preview.cultivation.maximumLifespan} years lifespan", color = Jade)
-                } else Text("Complete the fields above to preview your character.")
-                Text("Normal starts share the same realm, but not the same potential. Difficulty affects combat and breakthroughs. Advanced sandbox creation belongs to Phase 5.", style = MaterialTheme.typography.bodySmall)
+                if (value.length <= 3 && value.all(Char::isDigit)) { ageText = value; model.draft(o.copy(age = value.toIntOrNull() ?: 0)) }
+            }, label = { Text("Starting age · 16–100") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), isError = o.age !in 16..100, modifier = Modifier.fillMaxWidth())
+            Field("Appearance", o.appearance, 500, singleLine = false) { model.draft(o.copy(appearance = it)) }
+            Choice("Personality preset", o.personality, CreationCatalog.personalities) { model.draft(o.copy(personality = it)) }
+            Field("Personality", o.personality, 500) { model.draft(o.copy(personality = it)) }
+        } }
+        item { RecordSection("Spiritual Root and Constitution", "${preview?.spiritualRoot ?: "Generated"} · ${preview?.constitution ?: "Awaiting identity"}", "✧") {
+            Choice("Spiritual root", o.root ?: "Generated", listOf("Generated") + CreationCatalog.roots) { model.draft(o.copy(root = it.takeUnless { it == "Generated" })) }
+            Detail("Heavenly constitution", preview?.constitution ?: "Complete identity first")
+            Detail("Potential", preview?.potential ?: "Generated")
+            Text("Choose an element or let fate decide. Constitution and potential come from the existing generator, not a cosmetic bonus.", style = MaterialTheme.typography.bodySmall)
+        } }
+        item { RecordSection("Race and Bloodline", "${o.race} · ${preview?.bloodline ?: "Generated bloodline"}", "◈") {
+            Choice("Race preset", o.race, CreationCatalog.races) { model.draft(o.copy(race = it)) }
+            Field("Race or custom species", o.race, 80) { model.draft(o.copy(race = it)) }
+            Detail("Bloodline", preview?.bloodline ?: "Complete identity first")
+            Text("Bloodline is generated with this character. Custom species names do not grant extra powers.", style = MaterialTheme.typography.bodySmall)
+        } }
+        item { RecordSection("Innate Talents", preview?.potential ?: "Unrevealed potential", "☆") {
+            preview?.let { p ->
+                Detail("Cultivation aptitude", p.attributes.talent.toString())
+                Detail("Comprehension", p.attributes.comprehension.toString())
+                Detail("Vitality", p.attributes.vitality.toString())
+                Detail("Innate talents", p.talents.joinToString().ifBlank { "None revealed" })
             }
-        }
+            Text("These are your generated attributes. Hidden traits remain undiscovered.", style = MaterialTheme.typography.bodySmall)
+        } }
+        item { RecordSection("Background and Starting Scenario", "${o.background} · ${o.location}", "⌂") {
+            CreationCatalog.backgrounds.forEachIndexed { index, background ->
+                SectionCard(background, listOf("Herbs & enduring vitality", "Books & comprehension", "Lineage & spiritual power", "Mountains & a hunter's agility")[index], listOf("❧", "▤", "◈", "△")[index], onClick = { model.preset(background) })
+            }
+            Field("Birthplace", o.birthplace, 120) { model.draft(o.copy(birthplace = it)) }
+            Field("Background", o.background, 500) { model.draft(o.copy(background = it)) }
+            Choice("Starting location", o.location, CreationCatalog.locations) { model.draft(o.copy(location = it)) }
+            Field("Starting circumstances", o.circumstances, 500, singleLine = false) { model.draft(o.copy(circumstances = it)) }
+            Choice("Difficulty", o.difficulty, CreationCatalog.difficulties) { model.draft(o.copy(difficulty = it)) }
+        } }
+        item { RecordSection("Starting Cultivation and Abilities", "Qi Refining · Stage 1", "☯") {
+            Text("Every normal journey begins at Qi Refining, Stage 1.", color = Gold)
+            preview?.let { p ->
+                Detail("Cultivation method", p.cultivation.method)
+                Detail("Lifespan", "${p.cultivation.maximumLifespan} years")
+                p.techniques.forEach { Text("${it.name} · ${it.rank}", fontFamily = ScrollFont) }
+            }
+            Text("Your method and arts are real starting abilities. Higher-realm creation is not available in normal play.", style = MaterialTheme.typography.bodySmall)
+        } }
         item {
-            Button(onClick = { model.create(saveName) }, enabled = preview != null && saveName.isNotBlank(), modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) { Text("Begin journey & create save") }
-            Text("Creates a separate campaign immediately. Existing saves are never replaced.", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodySmall)
+            Button(onClick = { model.create(saveName) }, enabled = preview != null && saveName.isNotBlank(), modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text("Begin journey & create save") }
+            Text("A new life, saved separately. Your other campaigns stay untouched.", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -263,7 +291,7 @@ private fun Journal(state: GameUiState, model: GameViewModel) {
         item {
             Panel {
                 Text("THE BEGINNING", color = Gold, style = MaterialTheme.typography.labelLarge)
-                Text(s.world.startingCircumstances, fontFamily = FontFamily.Serif, style = MaterialTheme.typography.titleLarge)
+                Text(s.world.startingCircumstances, fontFamily = ScrollFont, style = MaterialTheme.typography.titleLarge)
                 Text("This is your personal chronicle, not an AI chat. Journal entries do not change your stats or advance world time.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = model::save, enabled = !state.busy) { Text(if (state.dirty) "Save changes" else "Save snapshot") }
@@ -273,7 +301,7 @@ private fun Journal(state: GameUiState, model: GameViewModel) {
             }
         }
         item {
-            Text("Write in your chronicle", style = MaterialTheme.typography.titleLarge, fontFamily = FontFamily.Serif)
+            Text("Write in your chronicle", style = MaterialTheme.typography.titleLarge, fontFamily = ScrollFont)
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(note, { if (it.length <= 2000) note = it }, label = { Text("Plans, promises, and reflections") }, minLines = 3, maxLines = 7, modifier = Modifier.fillMaxWidth())
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -301,7 +329,7 @@ private fun CharacterStatus(state: GameUiState, model: GameViewModel) {
             TextButton(onClick = { rename = true }, enabled = !state.busy) { Text("Change name") }
         }
         item { Panel {
-            Text(p.appearance, fontFamily = FontFamily.Serif, style = MaterialTheme.typography.titleLarge)
+            Text(p.appearance, fontFamily = ScrollFont, style = MaterialTheme.typography.titleLarge)
             Detail("Birthplace", p.birthplace); Detail("Background", p.background); Detail("Personality", p.personality)
         } }
         item { Panel {
@@ -352,7 +380,7 @@ private fun SaveManager(state: GameUiState, model: GameViewModel, onImport: () -
         items(state.slots, key = { it.id }) { slot ->
             Panel {
                 if (state.active?.save?.id == slot.id) Text("ACTIVE CAMPAIGN", style = MaterialTheme.typography.labelSmall, color = Jade)
-                Text(slot.name, style = MaterialTheme.typography.titleLarge, fontFamily = FontFamily.Serif)
+                Text(slot.name, style = MaterialTheme.typography.titleLarge, fontFamily = ScrollFont)
                 Text("${slot.playerName} · ${slot.race}")
                 Text("${slot.realmName} ${slot.substage} · Day ${slot.day}", color = Gold)
                 Text("Revision ${slot.revision} · ${date(slot.updatedAt)}", style = MaterialTheme.typography.bodySmall)
@@ -372,38 +400,61 @@ private fun SaveManager(state: GameUiState, model: GameViewModel, onImport: () -
 }
 
 @Composable
-private fun Settings(state: GameUiState, model: GameViewModel) {
-    LazyColumn(Modifier.testTag("settings"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        item { Heading("PREFERENCES", "A world that stays yours.", "Local gameplay data never depends on an AI provider or a conversation history.") }
-        item { Panel {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) { Text("Automatic saving", style = MaterialTheme.typography.titleMedium); Text("Persist each journal entry and name change.", style = MaterialTheme.typography.bodySmall) }
-                Switch(checked = state.preferences.autosave, onCheckedChange = model::setAutosave, enabled = state.preferencesReady && !state.busy)
+private fun Settings(state: GameUiState, model: GameViewModel, page: String?, open: (String?) -> Unit) {
+    LazyColumn(Modifier.testTag("settings"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        if (page == null) {
+            item { Heading("THE JADE COMPANION", "Settings", "Make this journey your own.") }
+            item { SectionCard("Provider & model", "AI service, API key and saved providers", "◇", "settings_ai") { open("ai") } }
+            item { SectionCard("Saving & backups", "Autosave, campaign files and protection", "▤", "settings_saves") { open("saves") } }
+            item { SectionCard("About this world", "Offline play, privacy and current scope", "☯", "settings_about") { open("about") } }
+        } else {
+            item { TextButton(onClick = { open(null) }, modifier = Modifier.testTag("settings_home")) { Text("‹ All settings") } }
+            when (page) {
+                "ai" -> {
+                    item { Heading("THE STORYTELLER", "Provider & model", "An optional voice for your journey.") }
+                    item { AiSettingsPanel(state, model) }
+                }
+                "saves" -> {
+                    item { Heading("PRESERVE YOUR PATH", "Saving & backups", "Your campaigns belong to you.") }
+                    item { Panel {
+                        SettingSwitch("Automatic journal saving", state.preferences.autosave, state.preferencesReady && !state.busy, model::setAutosave)
+                        Text("Saves journal and name edits. Adventure actions always save immediately.")
+                        Text("With autosave off, save journal changes before closing the app. Turning it back on saves pending edits.", style = MaterialTheme.typography.bodySmall)
+                    } }
+                    item { Panel {
+                        Text("Five recent backups", style = MaterialTheme.typography.titleLarge)
+                        Text("Each overwrite keeps the previous revision. Imports create a separate campaign.")
+                        Text("Export before uninstalling. Removing the app deletes its local saves and provider keys.", color = Gold)
+                        Button(onClick = { model.navigate(Screen.SAVES) }, modifier = Modifier.fillMaxWidth()) { Text("Open save manager") }
+                    } }
+                }
+                "about" -> {
+                    item { Heading("IMMORTAL WORLD", "A world that stays yours.", "A native, offline-first cultivation adventure.") }
+                    item { Panel {
+                        Text("Your choices. The world's rules.", style = MaterialTheme.typography.titleLarge)
+                        Text("AI can tell the story, but cannot grant stats, choose your dialogue or change the game's rules. Your private journal never goes to the storyteller.")
+                        Text("Cultivation, combat, travel, trade and saves work without AI. Web references are optional.")
+                    } }
+                    item { Panel {
+                        Text("A growing world", style = MaterialTheme.typography.titleLarge)
+                        Text("The current world is small and persistent. Large procedural worlds, advanced sect management and a full God Mode editor are still in development.")
+                        Text("Typography: Noto Sans and Noto Serif, under the SIL Open Font License 1.1. License included in the app assets.", style = MaterialTheme.typography.bodySmall)
+                    } }
+                }
             }
-            Text("New campaigns are always saved immediately. With autosave off, changes remain only in memory until you save. Enabling it saves any pending changes.")
-        } }
-        item { Panel {
-            Text("SAVE PROTECTION", color = Gold, style = MaterialTheme.typography.labelLarge)
-            Text("Every overwrite is transactional and retains a previous revision. The latest five backups per campaign are kept on this device.")
-            Text("Imports are validated before database writes and always create a separate slot. Unsupported versions and invalid data are rejected.")
-            TextButton(onClick = { model.navigate(Screen.SAVES) }) { Text("Open save manager") }
-        } }
-        item { AiSettingsPanel(state, model) }
-        item { Panel {
-            Text("BUILD SCOPE · ACTIVE ADVENTURE", color = Jade, style = MaterialTheme.typography.labelLarge)
-            Text("The existing creator, journal, independent campaigns, saves and backups are retained. Adventure actions always commit before optional AI narration, even when journal autosave is off.")
-            Text("Available now: a bounded connected world, NPC memories, trade, quests, sect membership, turn-based combat and optional activities. Large-scale sect management, procedural worlds and the God Mode editor are still future work; existing God Mode save flags are preserved.")
-            Text("Network calls occur only when you enable a provider or test its connection. Offline commands and saves do not need AI.", color = Gold)
-        } }
+        }
     }
 }
 
 @Composable
 internal fun Heading(eyebrow: String, title: String, subtitle: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Box(Modifier.fillMaxWidth()) {
+      FormationSeal(Modifier.align(Alignment.TopEnd).size(116.dp))
+      Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(eyebrow, color = Jade, letterSpacing = 2.sp, style = MaterialTheme.typography.labelSmall)
-        Text(title, fontFamily = FontFamily.Serif, fontSize = 32.sp, lineHeight = 38.sp, color = Gold)
+        Text(title, fontFamily = ScrollFont, fontSize = 30.sp, lineHeight = 39.sp, color = Gold, modifier = Modifier.padding(end = 24.dp))
         Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+      }
     }
 }
 @Composable

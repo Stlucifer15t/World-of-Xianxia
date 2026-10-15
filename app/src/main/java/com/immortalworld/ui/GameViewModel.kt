@@ -242,12 +242,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun configureAi(config: AiConfig) = task {
         require(mutable.value.aiReady) { "Wait for saved provider settings to load." }
         installProfiles(app.aiPreferences.save(config, mutable.value.activeProfileId))
-        mutable.update { it.copy(notice = "Provider settings saved on this device. API keys never enter campaign saves.") }
+        mutable.update { it.copy(notice = "Provider saved.") }
     }
     fun addAiProfile(name: String, config: AiConfig) = task {
         require(mutable.value.aiReady) { "Wait for provider settings to load." }
         installProfiles(app.aiPreferences.add(name, config))
-        mutable.update { it.copy(notice = "New independent provider profile saved and selected. Campaigns were not changed.") }
+        mutable.update { it.copy(notice = "New provider saved and selected.") }
     }
     fun selectAiProfile(id: String) = task { installProfiles(app.aiPreferences.select(id)) }
     fun renameAiProfile(name: String) = task {
@@ -257,6 +257,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteAiProfile(id: String) = task {
         installProfiles(app.aiPreferences.remove(id))
         mutable.update { it.copy(notice = "Provider profile removed. No campaigns were deleted.") }
+    }
+    fun testAndSaveAi(config: AiConfig) = task {
+        require(mutable.value.aiReady) { "Wait for saved providers to load." }
+        val targetId = mutable.value.activeProfileId
+        mutable.update { it.copy(aiWorking = true) }
+        CompatibleStoryteller(config).testConnection()
+        installProfiles(app.aiPreferences.save(config, targetId))
+        mutable.update { it.copy(notice = "Connection tested. Provider saved.") }
     }
     fun testAi(config: AiConfig) = task {
         mutable.update { it.copy(aiWorking = true) }

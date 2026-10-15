@@ -185,4 +185,17 @@ class AiUpgradeTest {
         }
     }
 
+    @Test fun geminiCatalogUsesExplicitLimitsAndFiltersNonGenerationModels() {
+        val models = ModelDiscovery.parseGemini("""{"models":[
+          {"name":"models/gemini-test","supportedGenerationMethods":["generateContent","countTokens"],"inputTokenLimit":1000000,"outputTokenLimit":8192},
+          {"name":"models/embed-test","supportedGenerationMethods":["embedContent"],"inputTokenLimit":2048},
+          {"name":"models/unknown","supportedGenerationMethods":["generateContent"],"inputTokenLimit":"1000000"}
+        ]}""")
+        assertEquals(2, models.size)
+        assertEquals("gemini-test", models.first().id)
+        assertEquals(1_000_000, models.first().contextTokens)
+        assertEquals(8192, models.first().maxOutputTokens)
+        assertNull(models.last().contextTokens)
+    }
+
 }

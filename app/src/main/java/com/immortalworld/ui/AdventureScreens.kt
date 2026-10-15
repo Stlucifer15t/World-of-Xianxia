@@ -27,7 +27,7 @@ import kotlinx.coroutines.delay
 @Composable
 private fun StoryProse(text: String, dialogue: Boolean = false) {
     StoryText.paragraphs(text).forEach { paragraph ->
-        Text(paragraph, fontSize = if (dialogue) 18.sp else 19.sp,
+        Text(paragraph, fontFamily = ScrollFont, fontSize = if (dialogue) 18.sp else 19.sp,
             lineHeight = if (dialogue) 28.sp else 30.sp,
             color = if (dialogue) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp))
@@ -177,7 +177,8 @@ internal fun CultivationScreen(state: GameUiState, model: GameViewModel) {
     val action = GameAction(ActionKind.ACTIVITY, activity, hours = hours.toIntOrNull() ?: 0, method = method, useHerb = herbs)
     val estimate = runCatching { Activities.estimate(save, action) }.getOrNull()
     LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item { Heading("OPTIONAL PRACTICE", "Your time. Your path.", "Advance in-game hours instantly. The adventure never requires waiting in real time.") }
+        item { Heading("THE INNER WORLD", "Refine qi. Temper the soul.", "Practice at your own pace. Simulate hours instantly—no real-time wait.") }
+        item { RealmTablet(save) }
         item { Choice("Activity", activity, Activities.kinds) { activity = it } }
         item { Choice("Method", method, (Activities.methods + save.player.cultivation.method).distinct()) { method = it } }
         item { OutlinedTextField(hours, { if (it.length <= 2 && it.all(Char::isDigit)) hours = it }, label = { Text("In-game hours (1–24)") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth()) }
@@ -220,10 +221,11 @@ internal fun AdventureLibrary(state: GameUiState, model: GameViewModel) {
     val a = s.adventure ?: return
     val ready = !state.busy
     LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item { Heading("CAMPAIGN RECORD", state.screen.name.lowercase().replaceFirstChar { it.uppercase() }, "Day ${s.world.day} · ${a.hour}:00 · ${s.world.currentLocation}") }
+        item { Heading(when (state.screen) { Screen.TECHNIQUES -> "PAVILION OF ARTS"; Screen.INVENTORY -> "THE TREASURE POUCH"; Screen.QUESTS -> "SECT & WORLD AFFAIRS"; else -> "JADE RECORDS" }, state.screen.name.lowercase().replaceFirstChar { it.uppercase() }, "Day ${s.world.day} · ${a.hour}:00 · ${s.world.currentLocation}") }
         if (state.screen == Screen.INVENTORY) {
             item { Text("${s.player.spiritStones} spirit stones. Buy/sell through nearby NPCs or the text input.") }
             items(s.player.inventory, key = { it.id }) { item -> Panel {
+                Text(when (item.kind) { "pill" -> "◉  SPIRIT PILLS"; "herb", "material" -> "❧  CULTIVATION MATERIALS"; "weapon" -> "◇  WEAPONS"; "armor" -> "◈  ARMOR"; "artifact" -> "✧  SPIRIT TREASURES"; else -> item.kind.uppercase() }, color = Gold, style = MaterialTheme.typography.labelSmall)
                 Text("${item.name} ×${item.quantity}", style = MaterialTheme.typography.titleMedium); Text(item.description)
                 Text("Power ${item.power} · ${item.equippedSlot ?: "unequipped"}")
                 if (item.kind in listOf("weapon", "armor", "artifact")) {
@@ -234,7 +236,9 @@ internal fun AdventureLibrary(state: GameUiState, model: GameViewModel) {
             } }
         }
         if (state.screen == Screen.TECHNIQUES) items(s.player.techniques, key = { it.id }) { technique -> Panel {
-            Text(technique.name, style = MaterialTheme.typography.titleMedium); Text(technique.description)
+            Text("▤  CULTIVATION MANUAL · ${technique.rank}", color = Gold, style = MaterialTheme.typography.labelSmall)
+            Text(technique.name, fontFamily = ScrollFont, style = MaterialTheme.typography.titleLarge); Text(technique.description)
+            LinearProgressIndicator(progress = { technique.mastery.toFloat() / 100f }, modifier = Modifier.fillMaxWidth())
             Text("${technique.effect} · Power ${technique.power} · Cost ${technique.energyCost} energy · Mastery ${technique.mastery}%")
             Button(onClick = { model.command(GameAction(ActionKind.TECHNIQUE, technique.id), "Use ${technique.name}") }, enabled = ready && a.combat != null) { Text("Use in encounter") }
             TextButton(onClick = { model.navigate(Screen.CULTIVATION) }) { Text("Practice techniques") }

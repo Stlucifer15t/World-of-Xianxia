@@ -37,8 +37,8 @@ class AiSettingsFlowTest {
         idle()
         compose.runOnUiThread { model.navigate(Screen.SETTINGS) }
         compose.onNodeWithTag("settings").assertExists()
-        // LazyColumn has not composed the AI item while the general settings are on screen.
-        compose.onNodeWithTag("settings").performScrollToNode(hasTestTag("ai_model"))
+        compose.onNodeWithTag("settings_ai").performScrollTo().performClick()
+        compose.onNodeWithTag("settings").performScrollToNode(hasTestTag("choose_provider"))
     }
     @After fun restore() {
         if (!::app.isInitialized || originalId == null) return
@@ -51,12 +51,15 @@ class AiSettingsFlowTest {
     }
     @Test fun manualMillionTokenSettingsAndIndependentProfilesWorkThroughTheUi() {
         val firstId = model.state.value.activeProfileId
-        compose.onNodeWithText("Complete HTTPS chat/completions URL").performScrollTo().performTextReplacement("https://example.invalid/v1/chat/completions")
+        compose.onNodeWithTag("choose_provider").performScrollTo().performClick()
+        compose.onNodeWithText("Other compatible API").performClick()
+        edit("ai_endpoint", "https://example.invalid/v1/chat/completions")
         edit("ai_model", "manual-cultivator")
         edit("ai_key", "instrumentation-only-key")
+        compose.onNodeWithTag("ai_tab_Limits").performScrollTo().performClick()
         edit("ai_context", "1,000,000")
         edit("ai_output", "900")
-        click("Save AI settings"); idle()
+        click("Save without testing"); idle()
         assertEquals(1_000_000, model.state.value.aiConfig.contextTokens)
         assertEquals(900, model.state.value.aiConfig.maxOutputTokens)
         assertTrue(model.state.value.aiConfig.manualContext)
@@ -76,13 +79,15 @@ class AiSettingsFlowTest {
             assertEquals(model.state.value.aiConfig, restored.state.value.aiConfig)
         } finally { compose.runOnUiThread { restoredStore.clear() } }
 
-        compose.onNodeWithTag("profile_management").performScrollTo().performClick()
+        compose.onNodeWithTag("ai_tab_Saved").performScrollTo().performClick()
         edit("profile_name", "$prefix copy")
         click("Save as new profile"); idle()
         val secondId = model.state.value.activeProfileId
         assertNotEquals(firstId, secondId)
         compose.onNodeWithTag("profile_$firstId").performScrollTo().performClick(); idle()
+        compose.onNodeWithTag("ai_tab_Setup").performScrollTo().performClick()
         edit("ai_key", "unsaved-key")
+        compose.onNodeWithTag("ai_tab_Saved").performScrollTo().performClick()
         compose.onNodeWithTag("profile_$secondId").performScrollTo().performClick()
         compose.onNodeWithText("Switch provider profile?").assertIsDisplayed()
         compose.onNodeWithTag("confirm_profile_switch").performClick(); idle()
@@ -96,4 +101,28 @@ class AiSettingsFlowTest {
         assertFalse(model.state.value.aiProfiles.any { it.id == secondId })
         assertTrue(model.state.value.aiProfiles.any { it.id == firstId })
     }
+    @Test fun providerSelectionClearsCredentialsAndFailedTestDoesNotSave() {
+        val original = model.state.value.aiConfig
+        compose.onNodeWithTag("choose_provider").performScrollTo().performClick()
+        compose.onNodeWithText("Google Gemini").performClick()
+        edit("ai_key", "test-only-not-a-live-key")
+        edit("ai_model", "manual-model")
+        compose.onNodeWithTag("toggle_api_key").performClick()
+        compose.onNodeWithTag("ai_key").assertTextContains("test-only-not-a-live-key")
+        compose.onNodeWithTag("choose_provider").performScrollTo().performClick()
+        compose.onNodeWithText("OpenAI").performClick()
+        compose.onNodeWithTag("ai_key").assertTextContains("")
+        compose.onNodeWithTag("choose_provider").performScrollTo().performClick()
+        compose.onNodeWithText("Other compatible API").performClick()
+        edit("ai_endpoint", "http://example.invalid/v1/chat/completions")
+        edit("ai_model", "invalid-endpoint-test")
+        click("Test connection & save"); idle()
+        assertNotNull(model.state.value.error)
+        assertEquals(original, runBlocking { app.aiPreferences.load() })
+        compose.onNodeWithText("OK").performClick()
+        compose.onNodeWithTag("ai_tab_Knowledge").performScrollTo().performClick()
+        click("Add Fandom example")
+        compose.onNodeWithTag("knowledge_sources").assertTextContains("https://martial-world.fandom.com/wiki/Cultivation")
+    }
+
 }
