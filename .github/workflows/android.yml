@@ -3,13 +3,20 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      preview_run:
+        description: 'Optional verified run ID: export its existing screenshots only (no rebuild)'
+        required: false
+        type: string
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: android-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   build:
+    if: ${{ !inputs.preview_run }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -83,3 +90,29 @@ jobs:
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
             app/build/outputs/ui-previews/
+
+  preview-export:
+    if: ${{ inputs.preview_run != '' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          name: device-test-reports-api-35
+          run-id: ${{ inputs.preview_run }}
+          github-token: ${{ github.token }}
+          path: app/build
+      # Runner permits only ten notices per step, each under 4 KiB.
+      - run: python3 scripts/ci-ui-previews.py --batch 0
+      - run: python3 scripts/ci-ui-previews.py --batch 1
+      - run: python3 scripts/ci-ui-previews.py --batch 2
+      - run: python3 scripts/ci-ui-previews.py --batch 3
+      - run: python3 scripts/ci-ui-previews.py --batch 4
+      - run: python3 scripts/ci-ui-previews.py --batch 5
+      - run: python3 scripts/ci-ui-previews.py --batch 6
+      - run: python3 scripts/ci-ui-previews.py --batch 7
+      - run: python3 scripts/ci-ui-previews.py --batch 8
+      - run: python3 scripts/ci-ui-previews.py --batch 9
+      - run: python3 scripts/ci-ui-previews.py --batch 10
+      - run: python3 scripts/ci-ui-previews.py --batch 11

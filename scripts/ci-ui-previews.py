@@ -37,12 +37,19 @@ if log.exists():
 if '--decode-only' in sys.argv:
     sys.exit(0)
 
+if '--batch' not in sys.argv:
+    print(f"::notice title=Native UI previews::{len(list(directory.glob('*.jpg')))} emulator screenshots are included in the device-test artifact.")
+    sys.exit(0)
+batch = int(sys.argv[sys.argv.index('--batch') + 1])
+annotation_index = 0
 for path in sorted(Path('app/build/outputs/ui-previews').glob('*.jpg'))[:6]:
     data = path.read_bytes()
     if len(data) > 160_000:
         continue
     encoded = base64.b64encode(data).decode('ascii')
-    chunks = [encoded[i:i+2800] for i in range(0, len(encoded), 2800)]
+    chunks = [encoded[i:i+3800] for i in range(0, len(encoded), 3800)]
     for i, chunk in enumerate(chunks, 1):
         message = json.dumps(dict(file=path.name, part=i, parts=len(chunks), base64=chunk))
-        print(f'::notice title=UI preview {path.stem} {i}/{len(chunks)}::{message}')
+        if annotation_index // 10 == batch:
+            print(f'::notice title=UI preview {path.stem} {i}/{len(chunks)}::{message}')
+        annotation_index += 1
