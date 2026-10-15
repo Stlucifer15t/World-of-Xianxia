@@ -11,8 +11,8 @@ android {
         applicationId = "com.immortalworld"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "0.5.0-jade-records"
+        versionCode = 6
+        versionName = "0.5.1-custom-api"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true }

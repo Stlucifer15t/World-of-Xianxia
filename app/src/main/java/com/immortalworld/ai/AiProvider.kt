@@ -3,7 +3,6 @@ package com.immortalworld.ai
 import com.immortalworld.core.*
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.*
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
@@ -24,8 +23,7 @@ class CompatibleStoryteller(private val config: AiConfig,
     companion object {
         val allowed = ActionKind.entries.filter { it !in setOf(ActionKind.SIMULATION_MODE, ActionKind.ENABLE_OFFLINE, ActionKind.DISABLE_OFFLINE, ActionKind.CLAIM_OFFLINE) }.map { it.name }.toSet()
         fun validate(config: AiConfig, allowHttp: Boolean = false, requireModel: Boolean = true) {
-            val url = config.endpoint.toHttpUrlOrNull() ?: throw AiFailure("Enter a complete chat/completions URL.")
-            require((url.isHttps || allowHttp) && url.username.isEmpty() && url.password.isEmpty() && url.query == null && url.fragment == null) { "Use an HTTPS endpoint without credentials, query parameters, or a fragment." }
+            AiEndpoints.resolve(config.endpoint, allowHttp)
             require((!requireModel || config.model.isNotBlank()) && config.model.length <= 200 && config.endpoint.length <= 500) { "Enter a model ID (up to 200 characters)." }
             require(config.contextTokens in 1024..10_000_000) { "Context window must be 1,024–10,000,000 tokens." }
             require(config.maxOutputTokens in 1..16000 && config.maxOutputTokens < config.contextTokens) { "Maximum output must be 1–16,000 tokens and smaller than the context window. Story length remains bounded." }
@@ -98,7 +96,7 @@ class CompatibleStoryteller(private val config: AiConfig,
         val body = JSONObject().put("model", config.model).put("temperature", config.temperature).put("max_tokens", output)
             .put("stream", stream)
             .put("messages", JSONArray().put(JSONObject().put("role", "system").put("content", system)).put(JSONObject().put("role", "user").put("content", fitted)))
-        val request = Request.Builder().url(config.endpoint).post(body.toString().toRequestBody("application/json".toMediaType()))
+        val request = Request.Builder().url(AiEndpoints.resolve(config.endpoint, allowHttpForTests).chat).post(body.toString().toRequestBody("application/json".toMediaType()))
             .apply { if (config.apiKey.isNotBlank()) header("Authorization", "Bearer ${config.apiKey}") }.build()
         return AiTransport.execute(client, request) { response ->
             if (!response.isSuccessful) throw AiTransport.failure(response.code)

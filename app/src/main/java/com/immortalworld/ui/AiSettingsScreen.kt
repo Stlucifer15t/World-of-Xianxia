@@ -69,6 +69,7 @@ internal fun AiSettingsPanel(state: GameUiState, model: GameViewModel) {
         maxOutputTokens = output.toIntOrNull() ?: 0, temperature = temperature.toDoubleOrNull() ?: Double.NaN,
         sources = sources.lines().map(String::trim).filter(String::isNotEmpty).distinct())
     fun endpoint(value: String) {
+        model.dismissMessage()
         val old = draft.endpoint.toHttpUrlOrNull(); val next = value.toHttpUrlOrNull()
         val changed = old?.host != next?.host || old?.port != next?.port || old?.scheme != next?.scheme
         draft = draft.copy(endpoint = value, apiKey = if (changed) "" else draft.apiKey,
@@ -94,12 +95,13 @@ internal fun AiSettingsPanel(state: GameUiState, model: GameViewModel) {
                 }
                 Panel {
                     if (custom) OutlinedTextField(draft.endpoint, { if (it.length <= 500) endpoint(it.trim()) },
-                        label = { Text("Chat API URL") }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("ai_endpoint"))
-                    OutlinedTextField(draft.apiKey, { if (it.length <= 1000) draft = draft.copy(apiKey = it) }, label = { Text("API key") },
+                        label = { Text("API base or chat URL") },
+                        supportingText = { Text("Example: https://example.com/v1") }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("ai_endpoint"))
+                    OutlinedTextField(draft.apiKey, { if (it.length <= 1000) { model.dismissMessage(); draft = draft.copy(apiKey = it) } }, label = { Text("API key") },
                         visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(), singleLine = true,
                         trailingIcon = { TextButton(onClick = { showKey = !showKey }, modifier = Modifier.testTag("toggle_api_key")) { Text(if (showKey) "Hide" else "Show") } },
                         modifier = Modifier.fillMaxWidth().testTag("ai_key"))
-                    OutlinedTextField(draft.model, { if (it.length <= 200) draft = draft.copy(model = it.trim(), manualContext = if (it.trim() != draft.model) false else draft.manualContext) },
+                    OutlinedTextField(draft.model, { if (it.length <= 200) { model.dismissMessage(); draft = draft.copy(model = it.trim(), manualContext = if (it.trim() != draft.model) false else draft.manualContext) } },
                         label = { Text("Model ID") }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("ai_model"))
                     Text("Enter an ID, or load models.", style = MaterialTheme.typography.bodySmall)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -193,7 +195,7 @@ internal fun AiSettingsPanel(state: GameUiState, model: GameViewModel) {
         confirmButton = { TextButton(onClick = { deleting = false; model.deleteAiProfile(state.activeProfileId) }, modifier = Modifier.testTag("confirm_delete_profile")) { Text("Delete profile") } }, dismissButton = { TextButton(onClick = { deleting = false }) { Text("Cancel") } })
     if (help) AlertDialog(onDismissRequest = { help = false }, title = { Text("Your story, your choice") }, text = {
         Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
-            Text("AI is optional. Keys are encrypted on this device and never included in campaign exports. Changing provider hosts clears the draft key.\n\nOnly relevant scenes and actions go to your provider—not private journals or full saves. Streaming text is a draft until checked.\n\nAuto-connect checks the model list without buying a reply. Model lists and limits vary by service; manual entry always works. Gemini uses Google's compatible chat API. Other services must support chat/completions.\n\nReferences use public pages. Automatic searches send generic cultivation terms; test queries send what you type. Retrieved excerpts go to your AI provider. Protected sites may not work. Up to eight sources are saved, at most two fetched per lookup. General search needs your own accessible SearXNG JSON endpoint.")
+            Text("AI is optional. Keys are encrypted on this device and never included in campaign exports. Changing provider hosts clears the draft key.\n\nOnly relevant scenes and actions go to your provider—not private journals or full saves. Streaming text is a draft until checked.\n\nAuto-connect checks the model list without buying a reply. Model lists and limits vary by service; manual entry always works. Gemini uses Google's compatible chat API. Other services must support chat/completions. Enter their API base URL (such as https://example.com/v1) or the full chat URL. We add /models for listing and /chat/completions for replies; include any required /v1 prefix yourself.\n\nReferences use public pages. Automatic searches send generic cultivation terms; test queries send what you type. Retrieved excerpts go to your AI provider. Protected sites may not work. Up to eight sources are saved, at most two fetched per lookup. General search needs your own accessible SearXNG JSON endpoint.")
         }
     }, confirmButton = { TextButton(onClick = { help = false }) { Text("Got it") } })
 }

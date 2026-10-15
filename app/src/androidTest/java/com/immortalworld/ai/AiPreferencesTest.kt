@@ -49,6 +49,15 @@ class AiPreferencesTest {
         assertFalse(store.data.first()[profilesKey]!!.contains(c.apiKey))
         assertFalse(file.readBytes().toString(Charsets.ISO_8859_1).contains(c.apiKey))
     }
+    @Test fun baseUrlProfilesRestoreWithoutRewritingStoredConfiguration() = runBlocking {
+        val c = sample().copy(endpoint = "https://example.invalid/gateway/v1/")
+        prefs.save(c)
+        val restored = AiPreferences(context, store, alias).load()
+        assertEquals(c, restored)
+        val routes = AiEndpoints.resolve(restored.endpoint)
+        assertEquals("/gateway/v1/models", routes.models.encodedPath)
+        assertEquals("/gateway/v1/chat/completions", routes.chat.encodedPath)
+    }
     @Test fun legacySingleProviderMigratesOnlyOnSuccessfulSave() = runBlocking {
         prefs.save(sample())
         val cipher = JSONObject(store.data.first()[profilesKey]!!).getJSONArray("profiles").getJSONObject(0).getString("keyCipher")

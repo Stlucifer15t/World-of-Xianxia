@@ -58,13 +58,14 @@ class AiSettingsFlowTest {
         val firstId = model.state.value.activeProfileId
         compose.onNodeWithTag("choose_provider").performScrollTo().performClick()
         compose.onNodeWithText("Other compatible API").performClick()
-        edit("ai_endpoint", "https://example.invalid/v1/chat/completions")
+        edit("ai_endpoint", "https://example.invalid/v1")
         edit("ai_model", "manual-cultivator")
         edit("ai_key", "instrumentation-only-key")
         tab("Limits")
         edit("ai_context", "1,000,000")
         edit("ai_output", "900")
         click("Save without testing"); idle()
+        assertEquals("https://example.invalid/v1", model.state.value.aiConfig.endpoint)
         assertEquals(1_000_000, model.state.value.aiConfig.contextTokens)
         assertEquals(900, model.state.value.aiConfig.maxOutputTokens)
         assertTrue(model.state.value.aiConfig.manualContext)
@@ -92,6 +93,7 @@ class AiSettingsFlowTest {
         compose.onNodeWithTag("profile_$firstId").performScrollTo().performClick(); idle()
         tab("Setup")
         edit("ai_key", "unsaved-key")
+        assertNull(model.state.value.notice) // Old success messages do not describe the edited form.
         tab("Saved")
         compose.onNodeWithTag("profile_$secondId").performScrollTo().performClick()
         compose.onNodeWithText("Switch provider profile?").assertIsDisplayed()

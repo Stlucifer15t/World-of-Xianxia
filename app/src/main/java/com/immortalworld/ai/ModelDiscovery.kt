@@ -1,18 +1,14 @@
 package com.immortalworld.ai
 
 import okhttp3.*
-import okhttp3.HttpUrl.Companion.toHttpUrl
 
 /** Uses explicit server metadata only—never guesses context capacity from a model's name. */
 class ModelDiscovery(private val client: OkHttpClient = AiTransport.metadataClient, private val allowHttpForTests: Boolean = false) {
     suspend fun fetch(config: AiConfig): ModelCatalog {
         CompatibleStoryteller.validate(config.copy(temperature = .6, contextTokens = 32768, maxOutputTokens = 1200, knowledgeEnabled = false, sources = emptyList(), searchEndpoint = ""), allowHttpForTests, requireModel = false)
-        val endpoint = config.endpoint.toHttpUrl()
-        require(endpoint.encodedPath.trimEnd('/').endsWith("/chat/completions")) { "Automatic listing needs a compatible /chat/completions endpoint. Enter a model and context limit manually." }
-        val path = endpoint.encodedPath.trimEnd('/').removeSuffix("/chat/completions") + "/models"
-        val gemini = endpoint.host == "generativelanguage.googleapis.com" && endpoint.encodedPath == "/v1beta/openai/chat/completions"
-        val url = endpoint.newBuilder().encodedPath(if (gemini) "/v1beta/models" else path).apply { if (gemini) addQueryParameter("pageSize", "1000") }.build()
-        val request = Request.Builder().url(url).get().apply {
+        val routes = AiEndpoints.resolve(config.endpoint, allowHttpForTests)
+        val gemini = routes.geminiCatalog
+        val request = Request.Builder().url(routes.models).get().apply {
             if (config.apiKey.isNotBlank()) header(if (gemini) "x-goog-api-key" else "Authorization", if (gemini) config.apiKey else "Bearer ${config.apiKey}")
         }.build()
         return AiTransport.execute(client, request) { response ->

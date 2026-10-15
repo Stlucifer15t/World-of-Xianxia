@@ -96,7 +96,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun detectModels(config: AiConfig) {
         val epoch = ++catalogEpoch; catalogJob?.cancel(); lastConnectionCheck = SystemClock.elapsedRealtime()
-        mutable.update { it.copy(catalogLoading = true, aiConnection = "Checking provider/model catalog…") }
+        mutable.update { it.copy(catalogLoading = true, notice = null, aiConnection = "Checking provider/model catalog…") }
         catalogJob = viewModelScope.launch {
             try {
                 val catalog = ModelDiscovery().fetch(config)
