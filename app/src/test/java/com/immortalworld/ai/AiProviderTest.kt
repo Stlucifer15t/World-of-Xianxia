@@ -15,6 +15,36 @@ class AiProviderTest {
     private val context = NarrativeContext("Lin", "Village", listOf("An attack dealt 12 damage."), emptyList(), input = "Attack")
     private fun envelope(text: String) = JSONObject().put("choices", JSONArray().put(JSONObject().put("message", JSONObject().put("content", text)))).toString()
     private fun provider(server: MockWebServer) = CompatibleStoryteller(AiConfig(true, server.url("/v1/chat/completions").toString(), "test-model", "unit-test-only"), allowHttpForTests = true)
+    @Test fun realOpeningRequestCarriesCreationSnapshotAndStreamsProseOnly() = runBlocking {
+        val options = CreationOptions(name = "Yue", appearance = "A worn jade clasp", background = "Exiled cartographer", personality = "Patient and curious")
+        val g = CharacterGenerator.generate(options, 42, "yue")
+        val s = OpeningScene.attach(GameSave(id = "opening-wire", name = "Wire test", createdAt = 1, updatedAt = 1,
+            randomState = g.randomState, player = g.character.copy(hiddenTraits = listOf("PRIVATE_TRAIT")),
+            world = WorldState("world", currentLocation = "Reed Harbour", startingCircumstances = "A sealed ferry gate",
+                journal = listOf(JournalEntry("private", 1, "PRIVATE_JOURNAL")))))
+        val c = OpeningScene.context(s, s.adventure!!.history.single())
+        MockWebServer().use { server ->
+            server.start()
+            val chunk = JSONObject().put("choices", JSONArray().put(JSONObject().put("delta", JSONObject().put("content", "River mist brushes the jade clasp."))))
+            server.enqueue(MockResponse().setHeader("Content-Type", "text/event-stream").setBody("data: $chunk\n\ndata: [DONE]\n\n"))
+            val drafts = mutableListOf<String>()
+            assertEquals("River mist brushes the jade clasp.", provider(server).narrateStreaming(c) { drafts.add(it) })
+            assertTrue(drafts.isNotEmpty())
+            val request = server.takeRequest(2, TimeUnit.SECONDS)!!
+            assertEquals("POST", request.method); assertEquals("/v1/chat/completions", request.path)
+            val body = JSONObject(request.body.readUtf8())
+            assertEquals(1200, body.getInt("max_tokens")); assertTrue(body.getBoolean("stream"))
+            val messages = body.getJSONArray("messages")
+            assertTrue(messages.getJSONObject(0).getString("content").contains("For pace=opening"))
+            val payload = JSONObject(messages.getJSONObject(1).getString("content"))
+            assertEquals("opening", payload.getString("pace"))
+            listOf("Yue", "A worn jade clasp", "Exiled cartographer", "Patient and curious", "A sealed ferry gate", g.character.spiritualRoot).forEach {
+                assertTrue(payload.toString().contains(it))
+            }
+            assertFalse(body.toString().contains("PRIVATE_TRAIT")); assertFalse(body.toString().contains("PRIVATE_JOURNAL"))
+            assertEquals(1, server.requestCount)
+        }
+    }
     @Test fun parsesOnlyTypedActionsWithoutMechanicalPatches() {
         assertEquals(GameAction(ActionKind.TRAVEL, "crossing"), CompatibleStoryteller.parseAction("""{"kind":"TRAVEL","target":"crossing"}"""))
         listOf("""{"kind":"ATTACK","damage":999}""", """{"kind":"SIMULATION_MODE","target":"PAUSED"}""", """{"kind":"ACTIVITY","hours":999}""", """{"kind":"TRAVEL","target":4}""", """{"kind":"OBSERVE"} {}""").forEach {
@@ -82,7 +112,7 @@ class AiProviderTest {
     @Test fun sceneBudgetAndPromptSupportGroundedLongFormWithoutPrivateContext() = runBlocking {
         MockWebServer().use { server ->
             server.start()
-            for ((pace, budget) in listOf("scene" to 1200, "major" to 1200, "brief" to 650, "dialogue" to 650)) {
+            for ((pace, budget) in listOf("opening" to 1200, "scene" to 1200, "major" to 1200, "brief" to 650, "dialogue" to 650)) {
                 server.enqueue(MockResponse().setBody(envelope("The river continues to flow.")))
                 provider(server).narrate(context.copy(pace = pace, spokenDialogue = "Mei: Dewleaf grows near water.", recentOpenings = listOf("Avoid this opening.")))
                 val body = JSONObject(server.takeRequest(2, TimeUnit.SECONDS)!!.body.readUtf8())

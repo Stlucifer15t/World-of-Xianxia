@@ -124,9 +124,9 @@ fun ImmortalWorldApp(model: GameViewModel) {
                     if (state.aiWorking || state.aiNotice != null) {
                         Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
                             Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                                Text(if (state.knowledgeWorking) "Looking up optional cultivation references. You can cancel; saved mechanics are safe." else if (state.aiWorking) "AI request in progress. You can inspect records or cancel." else state.aiNotice.orEmpty(), style = MaterialTheme.typography.bodySmall)
+                                Text(if (state.knowledgeWorking) "Looking up optional cultivation references. You can cancel; saved mechanics are safe." else if (state.aiWorking && state.active?.save?.adventure?.history?.any { it.id == state.streamingRecordId && OpeningScene.isOpening(it) } == true) "Writing your opening. Your character is saved; you can cancel or regenerate." else if (state.aiWorking) "AI request in progress. You can inspect records or cancel." else state.aiNotice.orEmpty(), style = MaterialTheme.typography.bodySmall)
                                 if (state.aiWorking) TextButton(onClick = model::cancelAi) { Text("Cancel AI request") }
-                                else if (state.aiConfig.enabled && state.active?.save?.adventure?.history?.isNotEmpty() == true)
+                                else if (state.aiConfig.enabled && state.active?.save?.adventure?.history?.lastOrNull()?.accepted == true)
                                     TextButton(onClick = model::retryNarration, enabled = !state.busy) { Text("Retry narration only") }
                             }
                         }
@@ -288,6 +288,8 @@ private fun Creator(state: GameUiState, model: GameViewModel) {
         } }
         item {
             Button(onClick = { model.create(saveName) }, enabled = preview != null && saveName.isNotBlank(), modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text("Begin journey & create save") }
+            Text(if (state.aiConfig.enabled) "Your saved AI provider writes the opening from these selections after your character is saved. Generation may incur provider charges."
+                else "AI storytelling is off. This creates a local opening; enable AI in Settings to generate it with your provider.", style = MaterialTheme.typography.bodySmall)
             Text("A new life, saved separately. Your other campaigns stay untouched.", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodySmall)
         }
     }

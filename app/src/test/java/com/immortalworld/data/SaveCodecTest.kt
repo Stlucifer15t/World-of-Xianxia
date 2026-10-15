@@ -13,6 +13,16 @@ class SaveCodecTest {
             world = WorldState("world-1", currentLocation = "Jade River", startingCircumstances = "A beginning.",
                 journal = listOf(JournalEntry("entry-1", 1, "A promise: \"return\".\nWith a new line."))))
     }
+    @Test fun savedOpeningAndRegeneratedProseRoundTripInExistingV3Format() {
+        val initial = OpeningScene.attach(sample())
+        val a = initial.adventure!!
+        val s = initial.copy(adventure = a.copy(history = a.history.map { it.copy(narration = "The river mist parts around the ferry gate.") }))
+        val decoded = SaveCodec.decode(SaveCodec.encode(s))
+        assertEquals(s, decoded)
+        assertEquals(3, decoded.version)
+        assertTrue(OpeningScene.isOpening(decoded.copy(id = "imported-copy").adventure!!.history.single()))
+        assertEquals(s.adventure!!.history.single().facts, OpeningScene.context(decoded, decoded.adventure!!.history.single()).authoritativeFacts)
+    }
     private fun rejects(json: String) { assertThrows(IllegalArgumentException::class.java) { SaveCodec.decode(json) } }
     @Test fun completeSnapshotRoundTrips() { val s = sample(); assertEquals(s, SaveCodec.decode(SaveCodec.encode(s))) }
     @Test fun editedSavePreservesGodModeAndLargeAttributes() {

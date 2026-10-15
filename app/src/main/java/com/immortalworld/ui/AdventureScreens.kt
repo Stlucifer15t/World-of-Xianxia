@@ -35,18 +35,26 @@ private fun StoryProse(text: String, dialogue: Boolean = false) {
 }
 
 @Composable
-private fun StoryReceipt(record: ActionRecord, liveDraft: String = "") {
+private fun StoryReceipt(record: ActionRecord, liveDraft: String = "", waiting: Boolean = false) {
+    val opening = OpeningScene.isOpening(record)
     Column(Modifier.fillMaxWidth().testTag("story_${record.id}")) {
-        Text("YOU · Day ${record.day}, ${record.hour.toString().padStart(2, '0')}:00", color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.labelMedium)
-        Text(record.input, fontSize = 17.sp, lineHeight = 25.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp, bottom = 18.dp))
+        Text(if (opening) "YOUR STORY · OPENING" else "YOU · Day ${record.day}, ${record.hour.toString().padStart(2, '0')}:00", color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.labelMedium)
+        if (!opening) Text(record.input, fontSize = 17.sp, lineHeight = 25.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp, bottom = 18.dp))
         if (!record.accepted) Text("ACTION NOT RESOLVED", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
         if (record.accepted && record.kind in listOf("BREAKTHROUGH", "JOIN", "TURN_IN", "CHALLENGE"))
             Text("A TURN IN THE JOURNEY", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(bottom = 12.dp))
-        if (liveDraft.isNotBlank()) {
+        if (waiting && liveDraft.isBlank()) {
+            Text(if (opening) "Writing your opening from your character and starting scenario…" else "Writing a new version…", color = MaterialTheme.colorScheme.primary)
+            LinearProgressIndicator(Modifier.fillMaxWidth().padding(vertical = 12.dp))
+            if (record.narration.isNotBlank()) StoryProse(record.narration)
+        } else if (liveDraft.isNotBlank()) {
             Text("STREAMING DRAFT · UNVERIFIED · NOT SAVED", color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.labelMedium)
             StoryProse(liveDraft)
             Text("Offline result remains authoritative until the complete narration passes validation.", style = MaterialTheme.typography.bodySmall)
-        } else StoryProse(record.narration.ifBlank { record.story.ifBlank { record.facts.joinToString(" ") } })
+        } else {
+            if (opening && record.narration.isBlank()) Text("LOCAL OPENING · NO AI RESPONSE SAVED", color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.labelMedium)
+            StoryProse(record.narration.ifBlank { record.story.ifBlank { record.facts.joinToString(" ") } })
+        }
         if (record.dialogue.isNotBlank()) StoryProse(record.dialogue, dialogue = true)
         var expanded by rememberSaveable(record.id) { mutableStateOf(false) }
         TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Hide action details" else "Action details · facts & calculations") }
@@ -55,6 +63,23 @@ private fun StoryReceipt(record: ActionRecord, liveDraft: String = "") {
             record.facts.forEach { Text(it, modifier = Modifier.padding(vertical = 5.dp), fontSize = 15.sp, lineHeight = 22.sp) }
             record.calculations.forEach { Text(it, modifier = Modifier.padding(vertical = 5.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
+    }
+}
+
+@Composable
+private fun NarrationControls(state: GameUiState, model: GameViewModel, record: ActionRecord?) {
+    if (!state.aiReady) return
+    if (!state.aiConfig.enabled) {
+        TextButton(onClick = { model.navigate(Screen.SETTINGS) }, enabled = !state.busy) { Text("Set up AI storytelling") }
+    } else {
+        val opening = record == null || OpeningScene.isOpening(record)
+        OutlinedButton(onClick = model::retryNarration, enabled = !state.busy,
+            modifier = Modifier.testTag(if (opening) "regenerate_opening" else "regenerate_story")) {
+            Text(if (opening) {
+                if (record?.narration.isNullOrBlank()) "Generate AI opening" else "Regenerate opening"
+            } else "Regenerate response")
+        }
+        Text("Prose only · keeps your character and outcomes · may use paid tokens", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -101,9 +126,15 @@ internal fun AdventureScreen(state: GameUiState, model: GameViewModel) {
                         Text("IMMORTAL WORLD · THE JOURNEY", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(bottom = 18.dp))
                         SceneNarrator.scene(save).forEach { StoryProse(it) }
                         Text("Your words direct the journey. Ask Mei about cultivation resources, inspect the recruitment notice, or describe your own approach.", fontSize = 16.sp, lineHeight = 24.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (OpeningScene.canAttach(save)) NarrationControls(state, model, null)
                     }
                 }
-                items(a.history.takeLast(shown).asReversed(), key = { it.id }) { record -> StoryReceipt(record, if (state.streamingRecordId == record.id) state.streamingText else "") }
+                items(a.history.takeLast(shown).asReversed(), key = { it.id }) { record ->
+                    Column {
+                        StoryReceipt(record, if (state.streamingRecordId == record.id) state.streamingText else "", state.aiWorking && state.streamingRecordId == record.id)
+                        if (record.id == a.history.lastOrNull()?.id && record.accepted) NarrationControls(state, model, record)
+                    }
+                }
                 if (a.history.size > shown) item { TextButton(onClick = { shown += 10 }) { Text("Read earlier entries (${a.history.size - shown})") } }
                 if (a.locationId == "ruins" && "wolf" !in a.defeated && a.combat == null) item {
                     Text("The inner courtyard is guarded. Searching it starts combat; investigating the outer wards does not.", color = MaterialTheme.colorScheme.secondary, fontSize = 16.sp, lineHeight = 24.sp)

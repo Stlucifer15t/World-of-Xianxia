@@ -17,7 +17,7 @@ class AdventureEngine(private val clock: () -> Long = System::currentTimeMillis)
             kind = action.kind.name, locationId = a.locationId,
             story = if (accepted) SceneNarrator.action(original, action, result) else result.facts.joinToString(" "),
             dialogue = result.dialogue, sceneContext = SceneNarrator.scene(result.state).joinToString("\n\n").take(3500))
-        return result.copy(state = SaveValidator.validate(result.state.copy(adventure = a.copy(history = (a.history + record).takeLast(100)))))
+        return result.copy(state = SaveValidator.validate(result.state.copy(adventure = a.copy(history = OpeningScene.retainHistory(a.history + record)))))
     }
 
     override fun apply(state: GameSave, action: GameAction): EngineResult {

@@ -32,7 +32,11 @@ data class GameUiState(
     val knowledgeResult: KnowledgeResult = KnowledgeResult(), val knowledgeWorking: Boolean = false,
     val streamingRecordId: String? = null, val streamingText: String = "",
 )
-class GameViewModel(application: Application) : AndroidViewModel(application) {
+class GameViewModel @JvmOverloads constructor(application: Application,
+    private val narrator: suspend (AiConfig, NarrativeContext, (String) -> Unit) -> String = { config, context, preview ->
+        CompatibleStoryteller(config).narrateStreaming(context, preview)
+    },
+) : AndroidViewModel(application) {
     private val app = application as ImmortalWorldApplication
     private val repository = app.saves
     private val mutable = MutableStateFlow(GameUiState())
@@ -145,6 +149,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun create(name: String) = task {
         ensureClean()
+        // Startup preference loading must not turn a configured AI start into a silent offline start.
+        state.first { it.aiReady }
         val options = mutable.value.draft; val seed = mutable.value.seed
         val save = withContext(Dispatchers.Default) {
             val generated = CharacterGenerator.generate(options, seed, UUID.randomUUID().toString())
@@ -158,7 +164,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 rules = GameRules(difficulty = options.difficulty),
             ))
         }
-        activate(repository.create(save))
+        withContext(NonCancellable) { activate(repository.create(OpeningScene.attach(save))) }
+        if (mutable.value.aiConfig.enabled) narrateRecord(mutable.value.active!!.save.adventure!!.history.single().id)
     }
     fun load(id: String) = task { ensureClean(); activate(repository.load(id)) }
     fun continueGame() {
@@ -328,32 +335,47 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val active = mutable.value.active ?: return
         val record = active.save.adventure!!.history.lastOrNull { it.id == id } ?: return
         if (!record.accepted) return
-        mutable.update { it.copy(aiWorking = true) }
+        val opening = OpeningScene.isOpening(record)
+        val requestJob = currentCoroutineContext()[Job]!!
+        mutable.update { it.copy(aiWorking = true, aiNotice = null, streamingRecordId = id, streamingText = "") }
         try {
             val config = runtimeAiConfig()
-            val query = KnowledgeQuery.from(record.input)
+            val query = if (opening) "cultivation spiritual roots" else KnowledgeQuery.from(record.input)
             val refs = if (config.knowledgeEnabled && query.isNotBlank()) {
                 mutable.update { it.copy(knowledgeWorking = true) }
                 try { knowledge.lookup(config, query) } finally { mutable.update { it.copy(knowledgeWorking = false) } }
             } else KnowledgeResult()
             mutable.update { it.copy(knowledgeResult = refs, streamingRecordId = id, streamingText = "") }
-            val context = ContextBuilder.build(active.save, record.input, record.facts, record).copy(referenceNotes = refs.references.map { it.context() })
-            val prose = CompatibleStoryteller(config).narrateStreaming(context) { draft ->
-                mutable.update { if (it.streamingRecordId == id) it.copy(streamingText = draft) else it }
-            }
+            val context = (if (opening) OpeningScene.context(active.save, record)
+                else ContextBuilder.build(active.save, record.input, record.facts, record)).copy(referenceNotes = refs.references.map { it.context() })
+            val prose = CompatibleStoryteller.validateNarration(narrator(config, context) { draft ->
+                if (requestJob.isActive) mutable.update { if (it.streamingRecordId == id) it.copy(streamingText = draft) else it }
+            }, context.authoritativeFacts)
+            currentCoroutineContext().ensureActive()
             withContext(NonCancellable) {
+                require(mutable.value.active == active) { "The campaign changed while narration was running. Its response was not applied." }
                 val changed = active.save.copy(adventure = active.save.adventure!!.copy(history = active.save.adventure!!.history.map { if (it.id == id) it.copy(narration = prose) else it }))
                 val saved = repository.save(changed, active.revision, "Before AI narration")
                 mutable.update { it.copy(active = saved, aiNotice = null) }
             }
         } catch (e: CancellationException) { throw e }
-        catch (e: Exception) { mutable.update { it.copy(aiNotice = "${e.message?.take(300)} Engine results are saved. Retry narration does not replay the action.") } }
+        catch (e: Exception) { mutable.update { it.copy(aiNotice = if (opening)
+            "Opening could not be generated. ${e.message?.take(220)} Your character and any previous opening are saved. You can retry without rerolling."
+            else "${e.message?.take(300)} Engine results and previous prose are saved. Regenerate does not replay the action.") } }
         finally { mutable.update { it.copy(streamingRecordId = null, streamingText = "", knowledgeWorking = false) } }
     }
     fun retryNarration() = task {
         require(mutable.value.aiConfig.enabled) { "Configure and enable an AI provider first." }
-        val id = mutable.value.active?.save?.adventure?.history?.lastOrNull()?.id ?: error("No action to narrate yet.")
-        narrateRecord(id)
+        require(!mutable.value.dirty) { "Save or discard your pending edits before regenerating prose." }
+        val active = mutable.value.active ?: error("No campaign is open.")
+        // Existing untouched v3 starts may opt into an opening; loading alone never buys a request.
+        if (OpeningScene.canAttach(active.save)) {
+            val saved = repository.save(OpeningScene.attach(active.save), active.revision, "Before generating an opening")
+            mutable.update { it.copy(active = saved) }
+        }
+        val record = mutable.value.active!!.save.adventure!!.history.lastOrNull() ?: error("No recorded scene to narrate yet.")
+        require(record.accepted) { "That action was rejected. Submit a new intention instead of regenerating its result." }
+        narrateRecord(record.id)
     }
 
 }
