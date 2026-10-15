@@ -130,6 +130,8 @@ class AiUpgradeTest {
         assertFalse(PublicWeb.publicAddress(InetAddress.getByName("192.168.1.1")))
         assertFalse(PublicWeb.publicAddress(InetAddress.getByName("fc00::1")))
         assertTrue(PublicWeb.publicAddress(InetAddress.getByName("8.8.8.8")))
+        assertFalse(PublicWeb.publicAddress(InetAddress.getByName("64:ff9b::a00:1")))
+        assertFalse(PublicWeb.publicAddress(InetAddress.getByName("2002:a00:1::")))
     }
     @Test fun automaticLookupQueriesExcludeNamesAndPrivateActionText() {
         assertEquals("cultivation meridians", KnowledgeQuery.from("Ask PRIVATE_NAME about cultivation and meridians, PRIVATE_DIARY"))

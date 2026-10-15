@@ -13,7 +13,15 @@ object PublicWeb {
     fun publicAddress(ip: InetAddress): Boolean {
         if (ip.isAnyLocalAddress || ip.isLoopbackAddress || ip.isLinkLocalAddress || ip.isSiteLocalAddress || ip.isMulticastAddress) return false
         val b = ip.address.map { it.toInt() and 255 }
-        if (b.size == 16) return b[0] and 0xfe != 0xfc // IPv6 unique-local
+        if (b.size == 16) {
+            if (b[0] and 0xfe == 0xfc) return false // IPv6 unique-local
+            // IPv4-compatible/NAT64 and 6to4 addresses must not tunnel to a private IPv4 target.
+            if (b.take(12).all { it == 0 } || b.take(12) == listOf(0, 100, 255, 155, 0, 0, 0, 0, 0, 0, 0, 0))
+                return publicAddress(InetAddress.getByAddress(ip.address.copyOfRange(12, 16)))
+            if (b[0] == 0x20 && b[1] == 0x02) return publicAddress(InetAddress.getByAddress(ip.address.copyOfRange(2, 6)))
+            if (b.take(4) == listOf(0x20, 0x01, 0, 0)) return false // Teredo is not needed for document retrieval.
+            return true
+        }
         return b[0] !in listOf(0, 127) && b[0] < 224 && !(b[0] == 100 && b[1] in 64..127) &&
             !(b[0] == 169 && b[1] == 254) && !(b[0] == 198 && b[1] in 18..19) && !(b[0] == 192 && b[1] == 0)
     }
@@ -64,7 +72,7 @@ class KnowledgeService(private val client: OkHttpClient = PublicWeb.client, priv
         val result = withTimeoutOrNull(6000) {
             supervisorScope {
                 val terms = query.lowercase().split(Regex("\\W+")).filter { it.length > 2 }
-                val chosen = config.sources.sortedByDescending { url -> terms.count { url.contains(it, true) } }.take(2)
+                val chosen = config.sources.distinct().sortedByDescending { url -> terms.count { url.contains(it, true) } }.take(2)
                 val jobs = chosen.map { url -> async { timed { source(url, query) } } }.toMutableList()
                 if (config.searchEndpoint.isNotBlank()) jobs += async { timed { search(config.searchEndpoint, query) } }
                 val all = jobs.awaitAll()

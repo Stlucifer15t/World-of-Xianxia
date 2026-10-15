@@ -92,4 +92,18 @@ class AiPreferencesTest {
         assertNull(prefs.loadProfiles().warning); assertEquals("repaired-secret", prefs.load().apiKey)
         prefs.select(other.id); assertEquals("updated-healthy", prefs.load().apiKey)
     }
+    @Test fun profileNamesAndLimitsAreValidatedWithoutChangingTheSelectedProfile() = runBlocking {
+        prefs.save(sample())
+        for (i in 1..7) prefs.add("Profile $i", sample("secret-$i"))
+        val before = prefs.loadProfiles()
+        assertTrue(runCatching { prefs.add("Ninth", sample()) }.isFailure)
+        assertTrue(runCatching { prefs.rename(before.activeId, "") }.isFailure)
+        assertTrue(runCatching { prefs.rename(before.activeId, "Profile 1") }.isFailure)
+        assertTrue(runCatching { prefs.select("missing-id") }.isFailure)
+        assertEquals(before, prefs.loadProfiles())
+        prefs.rename(before.activeId, "Renamed")
+        assertEquals("Renamed", prefs.loadProfiles().active.name)
+        assertEquals(before.active.config, prefs.load())
+    }
+
 }

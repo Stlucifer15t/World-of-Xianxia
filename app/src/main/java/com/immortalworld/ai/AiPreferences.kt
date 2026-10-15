@@ -123,9 +123,17 @@ class AiPreferences(context: Context, private val store: DataStore<Preferences> 
         validateStored(config); val current = read()
         require(current.profiles.size < 8) { "Up to eight provider profiles are supported." }
         require(name.trim().length in 1..60) { "Use a profile name of 1–60 characters." }
+        require(current.profiles.none { it.name.equals(name.trim(), true) }) { "That profile name is already in use." }
         val id = UUID.randomUUID().toString()
         val next = current.copy(activeId = id, profiles = current.profiles + AiProfile(id, name.trim(), config))
         write(next); next
+    } }
+    suspend fun rename(id: String, name: String): AiProfileStore = withContext(Dispatchers.IO) { lock.withLock {
+        val current = read()
+        require(name.trim().length in 1..60) { "Use a profile name of 1–60 characters." }
+        require(current.profiles.any { it.id == id })
+        require(current.profiles.none { it.id != id && it.name.equals(name.trim(), true) }) { "That profile name is already in use." }
+        current.copy(profiles = current.profiles.map { if (it.id == id) it.copy(name = name.trim()) else it }).also { write(it) }
     } }
     suspend fun select(id: String): AiProfileStore = withContext(Dispatchers.IO) { lock.withLock {
         val current = read(); require(current.profiles.any { it.id == id })

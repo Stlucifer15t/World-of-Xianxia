@@ -64,6 +64,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         runCatching { connectivity.registerDefaultNetworkCallback(networkCallback) }
         viewModelScope.launch {
             try { installProfiles(app.aiPreferences.loadProfiles()) }
+            catch (e: CancellationException) { throw e }
             catch (e: Exception) { mutable.update { it.copy(aiReady = true, aiConnection = "Saved provider could not be loaded. Offline play is available; existing settings were not overwritten.") } }
         }
         viewModelScope.launch {
@@ -103,9 +104,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     fun cancelModelLookup() { catalogEpoch++; catalogJob?.cancel(); mutable.update { it.copy(catalogLoading = false, aiConnection = "Model lookup cancelled. Manual settings retained.") } }
+    fun catalogFor(config: AiConfig): ModelCatalog? = mutable.value.catalog?.takeIf { it.endpoint == config.endpoint && catalogKey == config.apiKey }
     private fun runtimeAiConfig(): AiConfig {
         val state = mutable.value; val c = state.aiConfig
-        val model = state.catalog?.takeIf { it.endpoint == c.endpoint && catalogKey == c.apiKey }?.models?.firstOrNull { it.id == c.model }
+        val model = catalogFor(c)?.models?.firstOrNull { it.id == c.model }
         return c.copy(contextTokens = if (c.manualContext) c.contextTokens else model?.contextTokens ?: c.contextTokens,
             maxOutputTokens = minOf(c.maxOutputTokens, model?.maxOutputTokens ?: c.maxOutputTokens))
     }
@@ -234,6 +236,20 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         require(mutable.value.aiReady) { "Wait for saved provider settings to load." }
         installProfiles(app.aiPreferences.save(config))
         mutable.update { it.copy(notice = "Provider settings saved on this device. API keys never enter campaign saves.") }
+    }
+    fun addAiProfile(name: String, config: AiConfig) = task {
+        require(mutable.value.aiReady) { "Wait for provider settings to load." }
+        installProfiles(app.aiPreferences.add(name, config))
+        mutable.update { it.copy(notice = "New independent provider profile saved and selected. Campaigns were not changed.") }
+    }
+    fun selectAiProfile(id: String) = task { installProfiles(app.aiPreferences.select(id)) }
+    fun renameAiProfile(name: String) = task {
+        val updated = app.aiPreferences.rename(mutable.value.activeProfileId, name)
+        mutable.update { it.copy(aiProfiles = updated.profiles, notice = "Provider profile renamed.") }
+    }
+    fun deleteAiProfile(id: String) = task {
+        installProfiles(app.aiPreferences.remove(id))
+        mutable.update { it.copy(notice = "Provider profile removed. No campaigns were deleted.") }
     }
     fun testAi(config: AiConfig) = task {
         mutable.update { it.copy(aiWorking = true) }

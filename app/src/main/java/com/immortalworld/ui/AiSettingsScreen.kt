@@ -25,22 +25,49 @@ internal fun AiSettingsPanel(state: GameUiState, model: GameViewModel) {
     var sourceText by remember(state.aiConfig, state.activeProfileId) { mutableStateOf(state.aiConfig.sources.joinToString("\n")) }
     var knowledgeExpanded by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
-    val catalog = state.catalog?.takeIf { it.endpoint == draft.endpoint }
+    val catalog = model.catalogFor(draft)
+    var profilesExpanded by rememberSaveable { mutableStateOf(false) }
+    val activeProfile = state.aiProfiles.firstOrNull { it.id == state.activeProfileId }
+    var profileName by remember(state.activeProfileId, activeProfile?.name) { mutableStateOf(activeProfile?.name.orEmpty()) }
+    var switchTo by remember { mutableStateOf<String?>(null) }
+    var deleting by remember { mutableStateOf(false) }
     val selected = catalog?.models?.firstOrNull { it.id == draft.model }
     val uri = LocalUriHandler.current
     LaunchedEffect(selected, draft.manualContext, draft.model, draft.endpoint) {
         if (!draft.manualContext) context = (selected?.contextTokens ?: if (draft.model == state.aiConfig.model && draft.endpoint == state.aiConfig.endpoint) state.aiConfig.contextTokens else 32768).toString()
     }
     val config = draft.copy(contextTokens = context.toIntOrNull() ?: 0, maxOutputTokens = output.toIntOrNull() ?: 0,
-        temperature = temperature.toDoubleOrNull() ?: Double.NaN, sources = sourceText.lines().map(String::trim).filter(String::isNotEmpty))
+        temperature = temperature.toDoubleOrNull() ?: Double.NaN, sources = sourceText.lines().map(String::trim).filter(String::isNotEmpty).distinct())
     fun endpoint(value: String) {
         val old = draft.endpoint.toHttpUrlOrNull(); val next = value.toHttpUrlOrNull()
         val changedHost = old?.host != next?.host || old?.port != next?.port || old?.scheme != next?.scheme
-        draft = draft.copy(endpoint = value, apiKey = if (changedHost) "" else draft.apiKey, model = if (changedHost) "" else draft.model)
+        draft = draft.copy(endpoint = value, apiKey = if (changedHost) "" else draft.apiKey, model = if (changedHost) "" else draft.model, manualContext = if (value != draft.endpoint) false else draft.manualContext)
     }
     Panel {
         Text("AI STORYTELLER · OPTIONAL", color = MaterialTheme.colorScheme.secondary)
+        Text("Selected profile: ${activeProfile?.name ?: "not loaded"}", style = MaterialTheme.typography.bodyMedium)
         Text(state.aiConnection, modifier = Modifier.testTag("ai_connection_status"), style = MaterialTheme.typography.bodyMedium)
+        Text("Status refers to the last check, not unsaved form edits.", style = MaterialTheme.typography.bodySmall)
+        TextButton(onClick = { profilesExpanded = !profilesExpanded }, modifier = Modifier.testTag("profile_management")) { Text("Provider profiles · ${state.aiProfiles.size}") }
+        if (profilesExpanded) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                state.aiProfiles.forEach { profile ->
+                    FilterChip(selected = profile.id == state.activeProfileId, onClick = {
+                        if (profile.id != state.activeProfileId) {
+                            if (config != state.aiConfig || profileName != activeProfile?.name) switchTo = profile.id else model.selectAiProfile(profile.id)
+                        }
+                    }, label = { Text(profile.name) }, enabled = !state.busy, modifier = Modifier.testTag("profile_${profile.id}"))
+                }
+            }
+            OutlinedTextField(profileName, { if (it.length <= 60) profileName = it }, label = { Text("Profile name") }, singleLine = true,
+                modifier = Modifier.fillMaxWidth().testTag("profile_name"))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { model.addAiProfile(profileName, config) }, enabled = !state.busy && state.aiProfiles.size < 8 && profileName.isNotBlank() && state.aiProfiles.none { it.name.equals(profileName.trim(), true) }) { Text("Save as new profile") }
+                TextButton(onClick = { model.renameAiProfile(profileName) }, enabled = !state.busy && activeProfile != null && profileName.isNotBlank()) { Text("Rename profile") }
+                TextButton(onClick = { deleting = true }, enabled = !state.busy && state.aiProfiles.size > 1) { Text("Delete selected profile") }
+            }
+            Text("Up to eight independent configurations. Save as new copies this form, including its key, into a separate profile. Switching restores that profile's model, limits and sources. Credentials are local to this device, not portable campaign data.", style = MaterialTheme.typography.bodySmall)
+        }
         Row { Switch(draft.enabled, { draft = draft.copy(enabled = it) }, enabled = !state.busy); Text("Enable provider calls", Modifier.padding(12.dp)) }
         Text("Saved settings load automatically. Auto-connect checks the model catalog on startup/network return; it does not buy a completion or send campaign data.", style = MaterialTheme.typography.bodySmall)
         Row { Switch(draft.autoConnect, { draft = draft.copy(autoConnect = it) }); Text("Auto-connect saved provider", Modifier.padding(12.dp)) }
@@ -58,13 +85,13 @@ internal fun AiSettingsPanel(state: GameUiState, model: GameViewModel) {
             OutlinedButton(onClick = { model.detectModels(config) }, enabled = !state.catalogLoading && !state.busy) { Text("Detect models / check access") }
             if (state.catalogLoading) TextButton(onClick = model::cancelModelLookup) { Text("Cancel model lookup") }
         }
-        OutlinedTextField(draft.model, { if (it.length <= 200) draft = draft.copy(model = it.trim()) }, label = { Text("Model ID · type or select") },
+        OutlinedTextField(draft.model, { if (it.length <= 200) draft = draft.copy(model = it.trim(), manualContext = if (it.trim() != draft.model) false else draft.manualContext) }, label = { Text("Model ID · type or select") },
             singleLine = true, modifier = Modifier.fillMaxWidth().testTag("ai_model"))
         catalog?.let {
             Text("${it.models.size} reported models. Type part of an ID to filter; manual IDs are always allowed.", style = MaterialTheme.typography.bodySmall)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 it.models.filter { m -> draft.model.isBlank() || m.id.contains(draft.model, true) }.take(12).forEach { m ->
-                    SuggestionChip(onClick = { draft = draft.copy(model = m.id) }, label = { Text(m.id) })
+                    SuggestionChip(onClick = { draft = draft.copy(model = m.id, manualContext = if (m.id != draft.model) false else draft.manualContext) }, label = { Text(m.id) })
                 }
             }
         }
@@ -93,6 +120,10 @@ internal fun AiSettingsPanel(state: GameUiState, model: GameViewModel) {
             Text("Opt-in. Automatic searches send generic cultivation concepts, never your full action or journal. Explicit test queries are sent as typed. Retrieved excerpts also go to your AI provider; they cannot change rules, grant powers or become NPC knowledge.", style = MaterialTheme.typography.bodySmall)
             OutlinedTextField(sourceText, { if (it.length <= 8000) sourceText = it }, label = { Text("Knowledge sources · one HTTPS URL per line") },
                 placeholder = { Text("https://martial-world.fandom.com/wiki/Cultivation") }, minLines = 3, maxLines = 6, modifier = Modifier.fillMaxWidth().testTag("knowledge_sources"))
+            TextButton(onClick = {
+                val example = "https://martial-world.fandom.com/wiki/Cultivation"
+                sourceText = (sourceText.lines().filter { it.isNotBlank() } + example).distinct().joinToString("\n")
+            }, enabled = config.sources.size < 8) { Text("Add Fandom example source") }
             Text("Use direct pages or MediaWiki api.php endpoints. Fandom sources try a focused wiki search, then the specified page when accessible. Up to eight sources can be stored; at most two are fetched per lookup. No crawling, login bypass, JavaScript execution or whole-site download.", style = MaterialTheme.typography.bodySmall)
             Field("Optional SearXNG JSON search endpoint", draft.searchEndpoint, 1000) { draft = draft.copy(searchEndpoint = it.trim()) }
             Text("Optional general web search requires an accessible SearXNG-compatible /search endpoint with JSON enabled. Leave blank for source/wiki lookup only. No built-in search-service subscription or key is supplied.", style = MaterialTheme.typography.bodySmall)
@@ -109,4 +140,13 @@ internal fun AiSettingsPanel(state: GameUiState, model: GameViewModel) {
             Text("Knowledge changes are saved with Save AI settings. Cache: up to 16 focused lookups for 30 minutes in memory. Unavailable sources do not stop narration or local play.", style = MaterialTheme.typography.bodySmall)
         }
     }
+    switchTo?.let { id -> AlertDialog(onDismissRequest = { switchTo = null }, title = { Text("Switch provider profile?") },
+        text = { Text("Unsaved form edits will be discarded. The selected saved profile may auto-connect if enabled.") },
+        confirmButton = { TextButton(onClick = { switchTo = null; model.selectAiProfile(id) }, modifier = Modifier.testTag("confirm_profile_switch")) { Text("Discard edits and switch") } },
+        dismissButton = { TextButton(onClick = { switchTo = null }) { Text("Keep editing") } }) }
+    if (deleting) AlertDialog(onDismissRequest = { deleting = false }, title = { Text("Delete provider profile?") },
+        text = { Text("Remove ${activeProfile?.name} and its stored credential from this device? Campaigns and other profiles are unaffected.") },
+        confirmButton = { TextButton(onClick = { deleting = false; model.deleteAiProfile(state.activeProfileId) }, modifier = Modifier.testTag("confirm_delete_profile")) { Text("Delete profile") } },
+        dismissButton = { TextButton(onClick = { deleting = false }) { Text("Cancel") } })
+
 }
