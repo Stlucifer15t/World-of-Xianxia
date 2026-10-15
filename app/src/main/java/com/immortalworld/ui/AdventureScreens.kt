@@ -86,6 +86,7 @@ internal fun AdventureScreen(state: GameUiState, model: GameViewModel) {
                 Text("${save.realms.first { it.id == p.cultivation.realmId }.name} ${p.cultivation.substage} · ${p.cultivation.progress.toInt()}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 a.combat?.let { Text("${it.enemy.name} · ${it.enemy.health}/${it.enemy.maxHealth} HP · Turn ${it.turn} · ${it.position}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary) }
             }
+            HorizontalDivider(color = Gold.copy(alpha = .25f))
             LazyColumn(Modifier.weight(1f).testTag("adventure_history"), state = scroll,
                 contentPadding = PaddingValues(horizontal = 22.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
                 state.pendingAction?.let { pending -> item { Column {
@@ -176,7 +177,7 @@ internal fun CultivationScreen(state: GameUiState, model: GameViewModel) {
     LaunchedEffect(Unit) { while (true) { now = System.currentTimeMillis(); delay(60_000) } }
     val action = GameAction(ActionKind.ACTIVITY, activity, hours = hours.toIntOrNull() ?: 0, method = method, useHerb = herbs)
     val estimate = runCatching { Activities.estimate(save, action) }.getOrNull()
-    LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    LazyColumn(Modifier.testTag("cultivation"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { Heading("THE INNER WORLD", "Refine qi. Temper the soul.", "Practice at your own pace. Simulate hours instantly—no real-time wait.") }
         item { RealmTablet(save) }
         item { Choice("Activity", activity, Activities.kinds) { activity = it } }
@@ -220,7 +221,7 @@ internal fun AdventureLibrary(state: GameUiState, model: GameViewModel) {
     val s = state.active?.save ?: return
     val a = s.adventure ?: return
     val ready = !state.busy
-    LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    LazyColumn(Modifier.testTag("library_${state.screen.name.lowercase()}"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { Heading(when (state.screen) { Screen.TECHNIQUES -> "PAVILION OF ARTS"; Screen.INVENTORY -> "THE TREASURE POUCH"; Screen.QUESTS -> "SECT & WORLD AFFAIRS"; else -> "JADE RECORDS" }, state.screen.name.lowercase().replaceFirstChar { it.uppercase() }, "Day ${s.world.day} · ${a.hour}:00 · ${s.world.currentLocation}") }
         if (state.screen == Screen.INVENTORY) {
             item { Text("${s.player.spiritStones} spirit stones. Buy/sell through nearby NPCs or the text input.") }

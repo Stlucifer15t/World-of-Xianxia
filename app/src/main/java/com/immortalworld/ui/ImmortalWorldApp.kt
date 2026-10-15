@@ -37,6 +37,9 @@ import java.util.Date
 
 private val Palette = darkColorScheme(
     primary = Jade, onPrimary = Color(0xFF0B372D), secondary = Gold,
+    primaryContainer = Color(0xFF234C3E), onPrimaryContainer = Jade,
+    secondaryContainer = Color(0xFF423923), onSecondaryContainer = Gold,
+    outlineVariant = Color(0xFF30433B),
     background = Ink, surface = Color(0xFF17282B), surfaceVariant = Color(0xFF23373A),
     onBackground = Color(0xFFE5EBE6), onSurface = Color(0xFFE5EBE6),
     onSurfaceVariant = Color(0xFFACBFB9), outline = Color(0xFF536961),
@@ -332,14 +335,11 @@ private fun CharacterStatus(state: GameUiState, model: GameViewModel) {
             Text(p.appearance, fontFamily = ScrollFont, style = MaterialTheme.typography.titleLarge)
             Detail("Birthplace", p.birthplace); Detail("Background", p.background); Detail("Personality", p.personality)
         } }
+        item { RealmTablet(s) }
         item { Panel {
-            Text("CULTIVATION", color = Gold, style = MaterialTheme.typography.labelLarge)
-            Text("${s.realms.first { it.id == p.cultivation.realmId }.name} · Stage ${p.cultivation.substage}", style = MaterialTheme.typography.titleLarge)
-            LinearProgressIndicator(progress = { (p.cultivation.progress / 100).toFloat() }, modifier = Modifier.fillMaxWidth())
-            Detail("Progress", "${p.cultivation.progress}%"); Detail("Method", p.cultivation.method)
-            Detail("Lifespan", "${p.cultivation.maximumLifespan} years"); Detail("Health", "${p.health} / ${p.maxHealth}")
-            Detail("Spiritual energy", "${p.energy} / ${p.maxEnergy}")
-            Text("Cultivation and breakthroughs are player-controlled actions in the Cultivation screen.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Detail("Health", "${p.health} / ${p.maxHealth}")
+            Detail("Lifespan", "${p.cultivation.maximumLifespan} years")
+            OutlinedButton(onClick = { model.navigate(Screen.CULTIVATION) }) { Text("Enter the inner world") }
         } }
         item { Panel {
             Text("INNATE FOUNDATION", color = Gold, style = MaterialTheme.typography.labelLarge)

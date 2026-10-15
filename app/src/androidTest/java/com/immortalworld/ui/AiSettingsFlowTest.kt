@@ -111,7 +111,7 @@ class AiSettingsFlowTest {
         compose.onNodeWithTag("ai_key").assertTextContains("test-only-not-a-live-key")
         compose.onNodeWithTag("choose_provider").performScrollTo().performClick()
         compose.onNodeWithText("OpenAI").performClick()
-        compose.onNodeWithTag("ai_key").assertTextContains("")
+        assertEquals("", compose.onNodeWithTag("ai_key").fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.EditableText].text)
         compose.onNodeWithTag("choose_provider").performScrollTo().performClick()
         compose.onNodeWithText("Other compatible API").performClick()
         edit("ai_endpoint", "http://example.invalid/v1/chat/completions")
