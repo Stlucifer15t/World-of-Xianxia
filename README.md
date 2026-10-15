@@ -4,11 +4,11 @@ Native Kotlin/Jetpack Compose xianxia RPG with a **story-first, player-controlle
 adventure**, an authoritative offline game engine, optional AI narration, and
 portable saves. This extends the tested Phase 1 app rather than replacing it.
 
-**Verified build:** 0.6.0 AI openings, code commit `b5985ae`.
+**Verified build:** 0.7.0 persistent frontier, code commit `cb2af4d`.
 
-[Download the tested APK (ZIP)](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38671565107/artifacts/11943952691) · [Successful build and tests](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38671565107)
+[Download the tested APK (ZIP)](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38674189128/artifacts/11945795984) · [Successful build and tests](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38674189128)
 
-150 unit tests and 36 device tests on **each** of API 26/API 35 passed. Lint has
+164 unit tests and 41 device tests on **each** of API 26/API 35 passed. Lint has
 zero errors and 14 non-error findings. Extract `app-debug.apk` from the ZIP.
 GitHub may require sign-in. **Read the save-export warning below before installing.**
 
@@ -148,11 +148,11 @@ See [living-story behavior, boundaries and examples](docs/LIVING_STORY.md).
 - Existing creator, character records, private journal, independent save slots,
   manual snapshots, backups, duplication and Android file-picker import/export
   retained. Mechanics and action receipts save before AI narration runs.
-- Portable format **v3**, with **v1/v2 migration** and unchanged Room schema v1.
+- Portable format **v4**, with **v1/v2/v3 migration** and unchanged Room schema v1.
 
-This is a bounded first world (four connected locations, three NPCs, two quests,
-one sect and a guarded ruins encounter), **not** the complete master-spec game.
-Large-scale/procedural worlds, advanced sect management, group combat, arbitrary
+This is a bounded world (four starter locations plus six generated frontier sites,
+three NPCs, two quests, one sect and a guarded ruins encounter), **not** the complete master-spec game.
+Larger procedural worlds, advanced sect management, group combat, arbitrary
 mechanical content generation, the graphical God Mode
 editor and production release signing remain future work. The existing explicit
 God Mode save flag remains compatible with the engine; AI cannot enable it.
@@ -216,11 +216,15 @@ new runs create new downloads. A debug APK is not a production-signed release.
 
 A local Android download restriction is not a blocker: GitHub runners perform the
 build and publish bounded diagnostics through the Checks API, plus full reports
-and APK artifacts. Core tests can also run locally with Kotlin 2.1.20 / Java 17:
+and APK artifacts. The dependency-free base/adventure/story checks can also run locally with Kotlin 2.1.20 / Java 17:
 
 ```sh
 ./scripts/check-core.sh
 ```
+
+Run `./gradlew :core:test` for the complete core suite, including the opening and
+persistent-frontier JUnit regressions. Full Android/codec/provider/device commands
+and actual CI evidence are recorded in `docs/TESTING.md`.
 
 ## Architecture
 
@@ -228,7 +232,7 @@ and APK artifacts. Core tests can also run locally with Kotlin 2.1.20 / Java 17:
 core/    Character generation, immutable state, validation, action interpreter,
          engine/combat/activity/world rules, read-only scene presentation, bounded AI context
 app/     Existing Compose shell and ViewModel, Room repository, DataStore,
-         v1/v2/v3 codec, Android file picker, compatible AI adapter and Keystore,
+         v1/v2/v3/v4 codec, Android file picker, compatible AI adapter and Keystore,
          pooled async transport/SSE, model discovery and bounded public references
 scripts/ Dependency-free core checks and bounded CI diagnostics
 docs/    Rules, save contract, architecture, phase gates and test evidence

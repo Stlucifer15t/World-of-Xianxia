@@ -1,6 +1,78 @@
 # Immortal World verification and device acceptance
 
-## Current AI opening / regeneration build — 2026-10-15
+## Current persistent-frontier build — 2026-10-15
+
+[Run 38674189128](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38674189128) passed for code commit
+`cb2af4dd35af6326d85b53555d3548b17374ca3e` (version **0.7.0-persistent-frontier**, version code 8).
+[Download the tested APK ZIP](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38674189128/artifacts/11945795984).
+
+| Check | Actual result |
+|---|---|
+| Build / debug APK | Passed, uploaded |
+| Unit tests | **164 passed; 0 failures/errors/skips** |
+| API 26 instrumentation | **41 passed; 0 failures/errors/skips** |
+| API 35 instrumentation | **41 passed; 0 failures/errors/skips** |
+| Lint | 0 errors; 14 non-error findings |
+| Portable format | v4; v1/v2/v3/v4 import |
+| Room database schema | v1, unchanged |
+
+The first integrated build also passed (run **38673560333**, commit `8f02e6c`):
+163 unit tests and 41 device tests per API. Final hardening keeps new branches in a
+custom map's reachable component and includes the recorded route description in
+AI authority facts. The final complete suite was then rerun, not inferred from the
+earlier pass.
+
+### New coverage
+
+- **Nine core geography tests:** deterministic bounded generation; distinct seeds;
+  player/RNG preservation; custom starting locations; survey adjacency/privacy;
+  exact outbound/return durations, day rollover and background time; persistent
+  visits and varied revisits; finite resource tables; one-time/idempotent expansion;
+  combat blocking; malformed road/ID rejection; disconnected custom maps; actual
+  route descriptions in provider context.
+- **Five codec tests:** v3 opening/scene/encounter/RNG migration without expansion;
+  v4 seed/road/discovery/depletion roundtrip; signed seed extremes; missing, unknown,
+  coerced and dangling fields; old versions cannot smuggle v4 generation fields.
+  Existing v1/v2 migration fixtures remain true historical schemas.
+- **Two Room tests per API:** travel, discoveries, gathering and independent copies
+  survive database close/reopen; original raw v3 JSON is backed up on expansion,
+  while player state and other slots remain unchanged.
+- **Two native UI flows per API:** new campaign → Map → survey → travel → deeper
+  discovery → reload → return at **320dp / 130% font**; existing world → cancel
+  expansion → confirm → saved one-time expansion and backup → reload.
+- **One additional AI lifecycle flow per API:** expanding an older world does not
+  call the narrator even with AI enabled. Provider parsing also rejects a model's
+  attempt to propose the administrative `EXPAND_WORLD` command.
+
+All previous opening/regeneration/cancellation, endpoint/profile/encryption,
+combat/progression, save-safety and native UI suites remain included. Each emulator
+now runs 19 repository tests, 16 UI/lifecycle tests and six encrypted-provider tests.
+
+### Reproduce
+
+Use Java 17, Android SDK 35 and the checked-in Gradle wrapper (8.11.1):
+
+```sh
+./gradlew :core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+# With an API 26 or API 35 emulator/device connected:
+./gradlew :app:connectedDebugAndroidTest
+```
+
+These runs executed on GitHub Actions, not a locally installed Android toolchain.
+Machine-readable evidence: `verification-persistent-frontier-2026-10-15.json`.
+GitHub reports the APK ZIP SHA-256 as `f1cf6ec7272f39295920a2f717582a64e9f1e96ef781911afda667a606f54bcb`;
+this is an archive digest, not an independently measured APK hash.
+
+**Upgrade safety:** export from the old app before installing/uninstalling. Retain
+that original export for rollback: old apps cannot read v4. Provider keys are
+still device-only. Room v1 hash remains
+`8a2fa3d84ff99a951ce4ddffebe55999562ab93dcf2312a6db3483999da45d2c`.
+
+Physical-phone install, actual SAF providers, force-stop/rotation/TalkBack and
+live-provider prose quality remain manual acceptance work. This build is bounded
+wilderness geography, not full NPC population, sect management or a God Mode editor.
+
+## Previously verified AI opening / regeneration build — 2026-10-15
 
 [Run 38671565107](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38671565107) passed for code commit
 `b5985ae25a49a09922612d130251e2287bc84747` (version **0.6.0-ai-openings**, version code 7).

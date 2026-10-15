@@ -1,0 +1,117 @@
+{
+  "verified_on": "2026-10-15",
+  "application_version": "0.7.0-persistent-frontier",
+  "repository": "Stlucifer15t/World-of-Xianxia",
+  "branch": "arena/b0b240be-world-of-xianxia",
+  "code_commit": "cb2af4dd35af6326d85b53555d3548b17374ca3e",
+  "run_id": 38674189128,
+  "run_url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38674189128",
+  "conclusion": "success",
+  "unit_tests": {
+    "core": 34,
+    "adventure": 30,
+    "story": 15,
+    "save_codec": 33,
+    "ai_adapter_mock_server": 11,
+    "total": 164,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "ai_upgrade_mock_server_and_fixtures": 20,
+    "custom_api_endpoint_regressions": 7,
+    "opening_snapshots": 5,
+    "persistent_geography": 9
+  },
+  "emulator_tests": [
+    {
+      "api": 26,
+      "persistence": 19,
+      "compose": 16,
+      "total": 41,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "encrypted_ai_preferences": 6
+    },
+    {
+      "api": 35,
+      "persistence": 19,
+      "compose": 16,
+      "total": 41,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "encrypted_ai_preferences": 6
+    }
+  ],
+  "lint": {
+    "errors": 0,
+    "other_findings": 14
+  },
+  "save_format": {
+    "exports": 4,
+    "imports": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "room_database_schema": 1,
+    "room_schema_file_sha256": "8a2fa3d84ff99a951ce4ddffebe55999562ab93dcf2312a6db3483999da45d2c"
+  },
+  "apk_artifact": {
+    "id": 11945795984,
+    "name": "immortal-world-debug-apk",
+    "url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38674189128/artifacts/11945795984",
+    "size_in_bytes": 12553782,
+    "archive_sha256": "f1cf6ec7272f39295920a2f717582a64e9f1e96ef781911afda667a606f54bcb",
+    "digest_source": "GitHub artifact API; archive digest, not an independently measured APK digest"
+  },
+  "verified_additions": [
+    "Six deterministic persisted frontier locations and foot routes without consuming player RNG",
+    "Bounded connected branches including reachable-only expansion of disconnected custom maps",
+    "Survey discovery of adjacent destinations without movement or hidden-name leakage",
+    "Travel validated from persisted routes with exact durations, clock rollover and scheduled simulation",
+    "Actual recorded path descriptions included in provider authority facts and offline journey prose",
+    "Finite location-specific herb and ore tables preserve depletion across saves and visits",
+    "Explicit confirmed one-time expansion with no paid AI call and provider proposal rejection",
+    "Portable v4 roundtrip and strict v1/v2/v3 migrations retain character, opening, story, encounter and RNG data",
+    "Original raw v3 backup survives first overwrite; Room close/reopen and copy/import independence",
+    "Native Map survey/travel/reload and expansion confirmation flows on both APIs, including 320dp/130%-font layout",
+    "All previous AI opening, regeneration, cancellation, endpoint, encryption, save and gameplay regression suites"
+  ],
+  "remaining_manual_acceptance": [
+    "Physical-phone install, SAF providers, force-stop, rotation, TalkBack, IME and larger accessibility fonts",
+    "Live compatible AI provider with user-supplied credentials, network recovery and measured response latency",
+    "Live accessible Fandom/MediaWiki/custom-source/SearXNG behavior",
+    "Physical-device Android Keystore and profile review",
+    "Live CrowLLM account access and its actual model catalog with user-owned credentials",
+    "Live opening quality based on selected premise, first-request/regeneration cancellation and lifecycle on a physical phone",
+    "Physical-phone frontier surveying/travel/resource depletion, long sessions and v4 SAF export/import; live-provider journey grounding"
+  ],
+  "not_implemented": [
+    "Full graphical God Mode/world editor",
+    "Large procedural worlds and autonomous NPC plots",
+    "Advanced sect management, group combat and arbitrary generated mechanics",
+    "Production signing",
+    "Native non-chat-completions generation protocols",
+    "Exact per-model tokenizer accounting",
+    "Whole-site crawling or protected-site bypass (intentionally excluded)",
+    "On-device GGUF inference or native Cloudflare account configuration",
+    "Selectable higher-realm creation or independent decorative root-quality mechanics",
+    "Generated frontier NPC populations, new quest chains, advanced encounters and sect contribution/mission/leadership progression"
+  ],
+  "preview_artifact": {
+    "id": 11945214438,
+    "url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38674189128/artifacts/11945214438",
+    "name": "device-test-reports-api-35"
+  },
+  "version_code": 8,
+  "test_boundaries": {
+    "device_tests": "Real Compose controls, Room persistence and encrypted preferences; controlled narrator for paid-AI lifecycle assertions",
+    "provider_wire": "Actual compatible adapter against MockWebServer; no live paid credentials",
+    "initial_verified_run": 38673560333,
+    "initial_verified_commit": "8f02e6cba82c7f83e80c1dbccc43b5ede9384e42",
+    "final_hardening": "Connected-component expansion, saved route description in narration facts and an additional regression test; full suite rerun"
+  }
+}
