@@ -7,8 +7,10 @@ See `TESTING.md` for the exact verified build and outstanding device acceptance.
 
 ## Setup and automatic restoration
 
-Open **Menu → Settings / AI**. Enter a complete HTTPS **chat/completions** endpoint,
-API key and model ID, or use an endpoint preset. Changing the endpoint's origin
+Open **Menu → Settings / AI → Provider & model**. The **Setup** tab asks for a
+provider, API key and model ID. Choose Google Gemini, OpenAI, OpenRouter or Groq;
+URLs are filled in for you. Choose **Other compatible API** to enter a complete
+HTTPS **chat/completions** URL. **Show/Hide** controls key visibility locally. Changing the endpoint's origin
 clears the draft key to avoid sending one provider's credential to another host.
 Presets are conveniences for compatible APIs, not native integrations with every
 API offered by those companies. Native Anthropic Messages, OpenAI Responses,
@@ -22,7 +24,7 @@ preferences are read compatibly and migrated on the next successful settings wri
 A broken key leaves endpoint/model metadata intact and disables that profile for
 the session until the key is re-entered. Other encrypted keys are preserved.
 
-When **Enable provider calls** and **Auto-connect saved provider** are on, startup
+When **Use AI storytelling** (Setup) and **Reconnect automatically** (Limits) are on, startup
 performs a cancellable, asynchronous **GET /models**, not a paid completion. A
 validated network return can retry this metadata check with a 30-second cooldown.
 Signal/bandwidth updates alone do not repeatedly trigger checks.
@@ -30,16 +32,20 @@ Disabled profiles make no automatic requests. A model-list success establishes A
 reachability, not permission to generate with every listed model. A denied or
 unsupported catalog leaves manual configuration and offline play available.
 
-**Detect models / check access** works before a model has been entered. **Test
-generation · may cost** is an explicit, small completion with no campaign data.
-Neither action submits a game command. Network/server failures never replay an
+**Load models** works before a model has been entered. **Browse** opens a searchable
+picker; typing a model ID always remains possible. **Test connection & save** sends
+one small completion with no campaign data, then saves only if it succeeds.
+**Save without testing** saves edits without buying that completion (an enabled
+auto-connect configuration can still check metadata). Neither action submits a
+game command. Use the **Saved**, **Limits** and **Knowledge** tabs for secondary
+controls. Tabs retain the current form; leaving this page discards unsaved edits. Network/server failures never replay an
 action or automatically retry a paid completion. No API credentials are supplied
 with the app; provider calls may incur charges.
 
 ## Roadmap continuation: named provider profiles
 
-The remaining Phase 3 request-profile feature is now exposed under **Provider
-profiles** in the same settings panel. Up to eight profiles retain independent
+The Phase 3 request-profile feature is exposed under **Saved** in the provider
+page. Up to eight profiles retain independent
 endpoints, encrypted keys, models, context/output settings and knowledge sources.
 
 - Edit a form and enter a new name, then **Save as new profile**. The new profile
@@ -66,6 +72,16 @@ uses `/models` under the same API base and origin, with the same request-specifi
 credential. Redirects are disabled. The catalog is bounded; IDs can be filtered
 and selected or entered manually even when discovery fails.
 
+The Google Gemini preset uses `/v1beta/openai/chat/completions` for generation.
+Its model picker reads `/v1beta/models` with a request-local `x-goog-api-key` header,
+keeps models advertising `generateContent`, removes the `models/` prefix for chat
+IDs, and reads explicit `inputTokenLimit`/`outputTokenLimit` integers. It requests
+one bounded page (up to 1,000 entries), not an unlimited catalog crawl; manual IDs
+remain available. This is not a native Gemini generation adapter or a claim that
+every Gemini model supports all chat parameters. Live Google access remains a
+manual acceptance check. Native Cloudflare/account-ID and on-device GGUF runtimes
+are not implemented and therefore have no pretend provider cards.
+
 Context detection trusts only explicit positive integer fields supplied for the
 exact model: `context_length`, `context_window`, or `max_context_tokens`. It does
 not guess from a model name or maintain a potentially stale hardcoded capacity
@@ -75,8 +91,7 @@ APIs expose **no** context capacity; this is shown as unknown rather than invent
 
 - **Context window · tokens** is editable from 1,024 to 10,000,000. A provider-
   reported or manually verified **1,000,000** works; typing commas is supported.
-- Editing the box activates a manual override. Changing models restarts detection. **Use detected context when
-  available** returns it to metadata-driven mode.
+- Editing the box activates a manual override. Changing models restarts detection. **Use detected context** returns it to metadata-driven mode.
 - An unknown model uses a saved/default budget (initially 32,768), explicitly
   labeled **not a verified model limit**. Check its documentation and edit it.
 - **Maximum output · tokens** is separate (1–16,000, smaller than the context
@@ -100,7 +115,7 @@ connections can multiplex requests; HTTP/1.1 connections can be reused. Requests
 use asynchronous callbacks and coroutine cancellation, with bounded deadlines.
 Model checks do not block local gameplay. Web parsing runs away from the UI thread.
 
-**Stream narration previews** requests standard chat-completion SSE. Partial text
+**Show responses as they arrive** requests standard chat-completion SSE. Partial text
 appears in the story area, throttled to avoid recomposing on every byte, and is
 clearly labeled **unverified / not saved**. Structured action proposals are never
 executed incrementally. Only a complete response that passes the existing
@@ -119,9 +134,9 @@ sentence agrees with game facts.
 
 ## Optional cultivation knowledge
 
-Expand **Optional cultivation web knowledge**, enable reference lookup, and add
+Open **Knowledge**, enable **Look up web references**, and add
 public HTTPS sources—one URL per line. Nothing is fetched merely by opening settings.
-Save settings to use them in subsequent narration, or run **Test knowledge lookup**
+Use **Save without testing** to use them in subsequent narration, or run **Test lookup**
 with an explicit focused query.
 
 Supported sources:

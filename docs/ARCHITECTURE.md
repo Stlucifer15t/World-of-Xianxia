@@ -1,5 +1,24 @@
 # Architecture and authority boundaries
 
+## Jade-records UI refinement (0.5)
+
+`CultivationDesign.kt` draws static formation ornaments and provides settings cards,
+expandable creation records and a realm/qi tablet sourced directly from `GameSave`.
+Bundled Noto fonts separate practical controls from serif story text; UI scaling
+and the persistent adventure composer remain native Compose. The creator still
+calls the original seeded generator and never changes its seed on section toggles.
+
+Settings adds an internal hub/section route and local AI tabs. Credentials stay
+in `remember`, not saveable Bundles. Provider drafts survive tab switches, while
+saved profiles keep their existing DataStore/Keystore contract. `testAndSaveAi`
+awaits the existing short connection test before persisting to the captured profile
+ID. Preset selection only fills a supported endpoint; origin changes clear draft
+credentials. `ModelDiscovery` adds a Gemini-only catalog mapping with explicit
+metadata and generation-method filtering; chat generation still uses the same
+compatible adapter. No save schema or engine state was changed by this refinement.
+
+See `JADE_RECORDS.md` for visual behavior and `TESTING.md` for actual evidence.
+
 ## Connected-AI extension (0.4)
 
 The existing adapter and device DataStore remain the integration points. No

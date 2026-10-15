@@ -1,6 +1,60 @@
 # Immortal World verification and device acceptance
 
-## Current connected-AI build — 2026-10-15
+## Current Jade Records UI build — 2026-10-15
+
+[Run 38666930895](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38666930895) passed for code commit `35c9501afb208ec3a3aac8b9dd39886101f24abe`,
+version **0.5.0-jade-records**. [Download the tested debug APK ZIP](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38666930895/artifacts/11943050164).
+Extract `app-debug.apk`; export campaigns before any uninstall required by a
+changed debug signing key. Device-only API keys must be re-entered after uninstall.
+
+| Check | Actual result |
+|---|---|
+| Compilation / debug APK | Passed, uploaded |
+| Core / adventure / story | 79 passed |
+| Save codec / migrations | 27 passed |
+| Compatible AI adapter | 10 passed, mock server |
+| AI upgrades / Gemini catalog fixture | 20 passed |
+| Total unit tests | **136 passed; zero failures/errors/skips** |
+| API 26 instrumentation | **27 passed; zero failures/errors/skips** |
+| API 35 instrumentation | **27 passed; zero failures/errors/skips** |
+| Android lint | 0 errors; 14 non-error findings |
+| Save compatibility | Portable v3 and Room v1 unchanged |
+
+Each emulator ran 17 campaign persistence tests, five encrypted-provider tests and
+five Compose flows. These retain previous story/composer/draft/navigation checks,
+exercise profile switching and million-token limits through the new tabs, verify
+provider-origin key clearing and failed-test save protection, and add a **320dp /
+130%-font** cultivation-design flow. That flow selects a root, opens the cultivation
+records without changing the seed, verifies generated character data after creation,
+and navigates cultivation/techniques/inventory/settings without changing the save.
+The Gemini fixture tests generation-method filtering, model IDs and explicit
+integer input/output limits. It does not make paid or live Google requests.
+
+Real emulator screenshots are included under `outputs/ui-previews` in the device
+report artifact. These are resized diagnostic captures, not promotional mockups.
+Screenshot review caught oversized provider headers and mid-word metric labels;
+the final build uses a compact setup page, single-line contextual app-bar titles,
+and more suitable record layouts. Story and dialogue sizes were not reduced.
+
+Earlier UI runs found outdated heading selectors and a lazy-list lookup before
+its item was composed; these were corrected without removing assertions. Run
+`38663992441` passed all tests but could not collect screenshot files after app
+cleanup. Run `38664813806` passed all tests and retained captures through logcat.
+The final build above includes the subsequent visual fixes and wrapping tab controls
+and explicit section scrolling in the test driver. Preview-only export runs
+retrieve existing artifacts; their skipped build jobs are **not** new test evidence.
+
+Local `scripts/check-core.sh` passed all 79 checks. Android builds ran on GitHub
+Actions because the local SDK/dependency hosts are restricted. The record is
+`verification-jade-records-2026-10-15.json`. The GitHub-reported archive SHA-256 is
+`661cc60acb849ed791ff2af9a3e75223102ee7142fef35c892edabc41d9122e7` (ZIP digest, not independently measured APK digest).
+
+**Still manual:** physical-phone install/IME/rotation/TalkBack and font scales
+beyond the tested viewport; live Gemini/provider compatibility, latency and prose;
+live website accessibility. No on-device inference runtime, native Cloudflare
+account flow, selectable higher-realm creator or new decorative stats are claimed.
+
+## Previously verified connected-AI build — 2026-10-15
 
 [Run 38658988568](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38658988568) completed successfully for code commit
 `c8f7bf9f4b6dac25f19ae93b35eb6b185c70a51a` (version **0.4.0-connected-ai**).

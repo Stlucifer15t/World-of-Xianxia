@@ -1,5 +1,21 @@
 # Delivery phases and acceptance gates
 
+## Cultivation identity and simpler settings (0.5)
+
+Refines the existing native screens, not the engine: a card-based settings hub;
+short provider setup with searchable model selection and explicit test-and-save;
+secondary Saved/Limits/Knowledge tabs; expandable cultivation creation records;
+static formation seals; bundled, licensed Noto typography; a realm/progress/qi
+inner-world tablet; and distinct technique manuals and inventory categories.
+Google Gemini is offered through its compatible chat API, with a bounded,
+text-generation-filtered native model catalog. Unsupported local-model/Cloudflare
+runtimes are not presented as working integrations.
+
+All creation fields and generated traits retain their existing mechanics. Normal
+starts remain Qi Refining Stage 1; no decorative root quality or realm selector
+invents powers. Save v3 and Room v1 remain unchanged. See `JADE_RECORDS.md` and
+`TESTING.md` for scope and actual verification, including unresolved manual checks.
+
 ## Connected AI and request-profile continuation (0.4)
 
 The requested AI improvements extend Phase 3 in the existing architecture:

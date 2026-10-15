@@ -4,11 +4,11 @@ Native Kotlin/Jetpack Compose xianxia RPG with a **story-first, player-controlle
 adventure**, an authoritative offline game engine, optional AI narration, and
 portable saves. This extends the tested Phase 1 app rather than replacing it.
 
-**Verified build:** 0.4.0 connected AI, code commit `c8f7bf9`.
+**Verified build:** 0.5.0 Jade Records, code commit `35c9501`.
 
-[Download the tested APK (ZIP)](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38658988568/artifacts/11937149995) · [Successful build and tests](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38658988568)
+[Download the tested APK (ZIP)](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38666930895/artifacts/11943050164) · [Successful build and tests](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38666930895)
 
-135 unit tests and 25 device tests on **each** of API 26/API 35 passed. Lint has
+136 unit tests and 27 device tests on **each** of API 26/API 35 passed. Lint has
 zero errors and 14 non-error findings. Extract `app-debug.apk` from the ZIP.
 GitHub may require sign-in. **Read the save-export warning below before installing.**
 
@@ -21,7 +21,27 @@ that deletes private saves. Export first, install the new APK, then import the
 resetting the adventure, or deleting the journal. Keep the original export if
 you may need to return to an older app; older apps do not read v3 exports. Do not uninstall without an external save copy.
 
-## Connected AI settings (0.4)
+## Cultivation identity & simpler settings (0.5)
+
+- **Settings are now a hub**, not a wall of text: Provider & model, Saving & backups,
+  and About this world. Back returns to the hub before leaving Settings.
+- **Provider setup:** choose a service, enter your key, load/browse models, then
+  **Test connection & save**. Saved profiles, limits and optional knowledge have
+  their own tabs. Key visibility is controllable; detailed help stays out of the form.
+- **Google Gemini** preset uses Google's compatible chat API, with text-generation
+  model filtering and explicit input/output limits. No fake local-model options.
+- **Cultivation records:** see your spiritual foundation first; expand identity,
+  root/constitution, bloodline, talent, background and starting-abilities sections.
+  Real generated traits remain authoritative; normal starting realm is unchanged.
+- **Inner world:** realm, stage, breakthrough progress, qi reserves and method
+  lead the cultivation screen. Techniques read as manuals; inventory categories
+  distinguish pills, materials, weapons, armor and spirit treasures.
+- Static formation seals, ink/jade/gold surfaces and bundled Noto fonts strengthen
+  the identity without animation overhead. Narrative stays **19sp**, dialogue **18sp**.
+
+See [design and behavior notes](docs/JADE_RECORDS.md).
+
+## Retained connected AI settings (0.4)
 
 - Restore the selected encrypted provider configuration on startup; optional
   asynchronous model/access checks on startup and network restoration.
@@ -110,10 +130,10 @@ See [active adventure rules and limitations](docs/ACTIVE_ADVENTURE.md),
    `Cultivate for 4 hours`. Your character does not need to idle for real hours.
 5. Challenge a nearby NPC or search the guarded ruins to enter combat. Try
    `Attack`, `Defend`, `Use Flowing Stream Palm`, `Move to high ground`, or `Retreat`.
-6. For AI, open **Settings**, enter your provider's complete HTTPS
-   **chat/completions** endpoint and key. Detect models or enter one manually, check
-   the context budget, enable provider calls and save. The saved profile restores
-   automatically. The explicit generation test/provider calls may incur charges.
+6. For AI, open **Settings → Provider & model**, choose a provider and enter its key.
+   Load/browse models or type an ID. Enable **Use AI storytelling**, then test and
+   save (may incur provider charges), or save without testing. **Limits** holds
+   context/output settings. The selected saved profile restores automatically.
    No API key is included with the app.
 
 Unknown wording uses AI interpretation when configured, otherwise a bounded

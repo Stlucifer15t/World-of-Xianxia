@@ -1,0 +1,97 @@
+{
+  "verified_on": "2026-10-15",
+  "application_version": "0.5.0-jade-records",
+  "repository": "Stlucifer15t/World-of-Xianxia",
+  "branch": "arena/b0b240be-world-of-xianxia",
+  "code_commit": "35c9501afb208ec3a3aac8b9dd39886101f24abe",
+  "run_id": 38666930895,
+  "run_url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38666930895",
+  "conclusion": "success",
+  "unit_tests": {
+    "core": 34,
+    "adventure": 30,
+    "story": 15,
+    "save_codec": 27,
+    "ai_adapter_mock_server": 10,
+    "total": 136,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "ai_upgrade_mock_server_and_fixtures": 20
+  },
+  "emulator_tests": [
+    {
+      "api": 26,
+      "persistence": 17,
+      "compose": 5,
+      "total": 27,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "encrypted_ai_preferences": 5
+    },
+    {
+      "api": 35,
+      "persistence": 17,
+      "compose": 5,
+      "total": 27,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "encrypted_ai_preferences": 5
+    }
+  ],
+  "lint": {
+    "errors": 0,
+    "other_findings": 14
+  },
+  "save_format": {
+    "exports": 3,
+    "imports": [
+      1,
+      2,
+      3
+    ],
+    "room_database_schema": 1,
+    "room_schema_file_sha256": "8a2fa3d84ff99a951ce4ddffebe55999562ab93dcf2312a6db3483999da45d2c"
+  },
+  "apk_artifact": {
+    "id": 11943050164,
+    "name": "immortal-world-debug-apk",
+    "url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38666930895/artifacts/11943050164",
+    "size_in_bytes": 12523374,
+    "archive_sha256": "661cc60acb849ed791ff2af9a3e75223102ee7142fef35c892edabc41d9122e7",
+    "digest_source": "GitHub artifact API; archive digest, not an independently measured APK digest"
+  },
+  "verified_additions": [
+    "Retained engine, campaign persistence, save codec/migration, story and AI regression suites",
+    "Settings hub, independent AI tabs, encrypted profiles and separate million-token context/output settings",
+    "Provider-origin key clearing, key visibility and failed test-and-save preserving stored configuration",
+    "Gemini generation-model filtering and explicit input/output metadata fixtures",
+    "320dp/130%-font creation records, root selection without seed reroll and created-character equality",
+    "Cultivation/techniques/inventory/settings navigation without game-state mutation",
+    "Bundled Noto typography and actual emulator screenshot diagnostics; visual review informed compact layout fixes"
+  ],
+  "remaining_manual_acceptance": [
+    "Physical-phone install, SAF providers, force-stop, rotation, TalkBack, IME and larger accessibility fonts",
+    "Live compatible AI provider with user-supplied credentials, network recovery and measured response latency",
+    "Live accessible Fandom/MediaWiki/custom-source/SearXNG behavior",
+    "Physical-device Android Keystore and profile review"
+  ],
+  "not_implemented": [
+    "Full graphical God Mode/world editor",
+    "Large procedural worlds and autonomous NPC plots",
+    "Advanced sect management, group combat and arbitrary generated mechanics",
+    "Production signing",
+    "Native non-chat-completions generation protocols",
+    "Exact per-model tokenizer accounting",
+    "Whole-site crawling or protected-site bypass (intentionally excluded)",
+    "On-device GGUF inference or native Cloudflare account configuration",
+    "Selectable higher-realm creation or independent decorative root-quality mechanics"
+  ],
+  "preview_artifact": {
+    "id": 11942710930,
+    "url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38666930895/artifacts/11942710930",
+    "name": "device-test-reports-api-35"
+  }
+}
