@@ -3,7 +3,7 @@
 **Presentation update:** [Living story 0.3](LIVING_STORY.md) supersedes the old
 Journey layout and narrator budget described in this document. The mechanical
 rules below remain, with public notice inspection and seeded spiritual sense added.
-Portable saves are now v3 with v1/v2 import support.
+Portable saves are now v4 with v1/v2/v3 import support. [Persistent frontier 0.7](PERSISTENT_FRONTIER.md) extends the small map with saved roads and gathering tables.
 
 This increment **extends** the existing `:core`, Compose screens, AndroidViewModel,
 Room aggregate repository, DataStore preferences, character generator and save
@@ -98,7 +98,7 @@ No network is needed for engine commands or any save operation. The private
 
 ### Exploration, social systems and world time
 
-Travel costs two in-game hours along adjacent discovered roads. Investigating,
+Starter roads still cost two in-game hours. As of 0.7, other adjacent discovered roads use their persisted durations (generated routes: 1–4 hours). Investigating,
 searching, speaking, trading and most combat turns cost one hour. Inspecting and
 changing equipment do not advance time. Search opportunities are finite (three per
 location); entering the guarded ruins courtyard starts a wolf encounter, whereas

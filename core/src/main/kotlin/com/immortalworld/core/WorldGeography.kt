@@ -45,7 +45,11 @@ object WorldGeography {
             "A gravel footpath runs beside a drainage channel. Flat stones mark the crossings over the water.",
             "A ridge track winds between low rock outcrops. Sheltered turns break the line of the climb.")
         val added = mutableListOf<Location>(); val roads = mutableListOf<TravelRoute>()
-        val anchors = listOf("village", "crossing", "mountain").filter { id -> a.locations.any { it.id == id } }.ifEmpty { listOf(a.locationId) }
+        // An imported map may contain disconnected islands. Attach the frontier only to the
+        // current connected component; do not invent bridges or leave new sites unreachable.
+        val reachable = mutableSetOf(a.locationId)
+        repeat(a.locations.size) { reachable.toList().forEach { reachable.addAll(neighbors(a, it)) } }
+        val anchors = listOf("village", "crossing", "mountain").filter { it in reachable }.ifEmpty { listOf(a.locationId) }
         repeat(3) { branch ->
             var from = anchors[branch % anchors.size]
             repeat(2) { depth ->

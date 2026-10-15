@@ -41,9 +41,13 @@ class WorldGeographyTest {
         assertEquals(1, travelled.adventure!!.visits["frontier_1"])
         assertTrue(travelled.adventure!!.history.last().facts.any { it.contains("${road.hours} in-game hours on foot") })
         assertTrue(travelled.adventure!!.history.last().story.contains(road.description))
+        val receipt = travelled.adventure!!.history.last()
+        assertTrue(ContextBuilder.build(travelled, receipt.input, receipt.facts, receipt).authoritativeFacts.any { it.contains(road.description) })
         val back = engine.apply(travelled, GameAction(ActionKind.TRAVEL, "village")).state
         assertEquals(9 + 2 * road.hours, back.adventure!!.hour)
         assertEquals(before.randomState, back.randomState)
+        val revisit = engine.apply(back, GameAction(ActionKind.TRAVEL, "frontier_1")).state
+        assertNotEquals(SceneNarrator.scene(travelled).first(), SceneNarrator.scene(revisit).first())
         val otherKnown = survey.copy(adventure = survey.adventure!!.copy(locations = survey.adventure!!.locations.map { it.copy(discovered = true) }))
         assertThrows(IllegalArgumentException::class.java) { engine.apply(otherKnown, GameAction(ActionKind.TRAVEL, "frontier_6")) }
     }
@@ -70,6 +74,16 @@ class WorldGeographyTest {
         assertFalse(rejected.state.adventure!!.history.last().accepted)
         assertEquals(first.state.adventure!!.locations, rejected.state.adventure!!.locations)
         assertEquals(first.state.adventure!!.routes, rejected.state.adventure!!.routes)
+    }
+    @Test fun expansionOfDisconnectedCustomMapKeepsOldIslandsAndMakesNewSitesReachable() {
+        val original = base().let { it.copy(adventure = it.adventure!!.copy(routes = emptyList())) }
+        val expanded = WorldGeography.expand(original)
+        val a = expanded.adventure!!
+        val reachable = mutableSetOf(a.locationId)
+        repeat(a.locations.size) { reachable.toList().forEach { reachable.addAll(WorldGeography.neighbors(a, it)) } }
+        assertTrue((1..6).all { "frontier_$it" in reachable })
+        assertFalse("crossing" in reachable) // Existing disconnection was not silently changed.
+        assertEquals(original.adventure!!.locations, a.locations.take(original.adventure!!.locations.size))
     }
     @Test fun routeValidatorRejectsDanglingDuplicateLoopAndInvalidHours() {
         val s = frontier(); val a = s.adventure!!; val road = a.routes.first()

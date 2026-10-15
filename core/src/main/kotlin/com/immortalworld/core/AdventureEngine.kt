@@ -225,6 +225,7 @@ class AdventureEngine(private val clock: () -> Long = System::currentTimeMillis)
                 a = a.copy(locations = a.locations.map { if (it.id == dest.id) it.copy(discovered = true) else it }, locationId = dest.id, visits = a.visits + (dest.id to ((a.visits[dest.id] ?: 0) + 1)))
                 s = s.copy(world = s.world.copy(currentLocation = dest.name))
                 fact("You travel from $origin to ${dest.name}, taking $elapsed in-game hours on foot${if (road != null) " along the recorded route" else " without an established road"}${if (s.rules.godMode) " (sandbox travel permissions enabled)" else ""}.")
+                if (road != null) fact("Recorded footpath: ${road.description}")
             }
             ActionKind.EXPAND_WORLD -> {
                 a = WorldGeography.expand(s.copy(adventure = a)).adventure!!

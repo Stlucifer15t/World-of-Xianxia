@@ -1,8 +1,8 @@
 # Connected AI settings and cultivation references
 
 This extends the existing OpenAI-compatible adapter, encrypted device preferences,
-Compose settings and commit-before-narration pipeline. Campaign format **v3** and
-Room schema **v1** are unchanged. Offline mechanics never depend on an API key.
+Compose settings and commit-before-narration pipeline. Campaign exports now use **v4** for saved geography (v1–v4 import);
+Room schema remains **v1**. Provider configuration is still independent. Offline mechanics never depend on an API key.
 See `TESTING.md` for the exact verified build and outstanding device acceptance.
 
 ## Setup and automatic restoration

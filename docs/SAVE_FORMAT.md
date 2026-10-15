@@ -1,4 +1,4 @@
-# Portable save contract — version 3 (version 1/2 imports supported)
+# Portable save contract — version 4 (version 1/2/3 imports supported)
 
 Extension: `.xianxia.json`. MIME: `application/json`. Encoding: UTF-8. The actual
 executable contract is `SaveCodec` plus `SaveValidator`; the specification's short
@@ -12,7 +12,7 @@ All IDs are opaque, nonblank strings, at most 100 UTF-16 code units (realm IDs: 
 | Field | Type | Meaning |
 |---|---|---|
 | `format` | string | Exactly `xianxia-save` |
-| `version` | integer | Exports use `3`; imports accept `1`, `2`, `3` |
+| `version` | integer | Exports use `4`; imports accept `1`, `2`, `3`, `4` |
 | `id` | string | Source campaign ID; replaced on import |
 | `name` | string | Campaign title, 1–80 code units |
 | `createdAt`, `updatedAt` | integer | Nonnegative Unix epoch milliseconds, updated ≥ created |
@@ -21,7 +21,7 @@ All IDs are opaque, nonblank strings, at most 100 UTF-16 code units (realm IDs: 
 | `world` | object | Persistent world metadata and journal |
 | `rules` | object | Per-campaign gameplay settings |
 | `realms` | array | Configured ordered hierarchy, 1–64 unique entries |
-| `adventure` | object or null | Required in v2/v3; absent in v1; active world/encounter state below |
+| `adventure` | object or null | Required in v2/v3/v4; absent in v1; active world/encounter state below |
 
 Do not round `randomState` through JavaScript's floating-point number type. Use a
 JSON editor that preserves signed 64-bit integers. Save files are for personal
@@ -85,7 +85,7 @@ Each entry: `id`, `name` (≤80), `stages` (integer 1–99), `baseLifespan` (int
 1–1,000,000,000). The default hierarchy spans Qi Refining through Immortal Emperor.
 Edited hierarchies can be imported if all references and stage bounds validate.
 
-## Version 3 adventure aggregate
+## Version 4 adventure aggregate
 
 `adventure` is nullable for uninitialized campaigns. Activation initializes missing
 state through a backed-up repository update. All object fields are required;
@@ -94,7 +94,14 @@ unknown fields fail closed. Limits are enforced in `AdventureValidator`.
 - `locationId` must refer to a location whose name matches `world.currentLocation`.
 - `hour` (0–23), `simulationHour` (0–100 billion), `simulationMode`
   (`PAUSED`, `NORMAL`, `ACCELERATED`), `sequence` (0–1 billion), `injury` (0–80).
-- `locations` (≤128): id, name, description, danger (0–10), discovered boolean.
+- `locations` (≤128): id, name, description, danger (0–10), discovered boolean,
+  `forage` (`herbs`, `ore`, `herbs_and_ore`). This is a real gathering table.
+- `routes` (≤256): id, from, to, hours (integer 1–24), description (1–1000).
+  Endpoints must be distinct existing location IDs. Routes are undirected; IDs
+  and endpoint pairs must be unique. Empty routes are valid for disconnected custom maps.
+- `regionSeed`: nullable signed 64-bit integer. Null means no generated frontier;
+  non-null records a generated frontier's seed (including zero/negative seeds).
+  Complete geography is persisted, not regenerated from the seed on load.
 - `npcs` (≤100): complete `character` using the player record schema; locationId,
   role, goal, knowledge (≤20 strings), relationship (-100–100), memories
   (≤20 strings, 1,000 characters each), negotiated boolean. IDs are distinct.
@@ -148,29 +155,37 @@ The dedicated graphical God Mode editor remains future work, not part of this in
 
 ## Migration policy
 
-V1 → v3 preserves every v1 game field and replaces only the format version,
+V1 → v4 preserves every v1 game field and replaces only the format version,
 initially leaving `adventure` null. Activating that campaign seeds its adventure
 and uses the existing transactional overwrite/backup path. The old snapshot remains
 in the backup until normal retention prunes it.
 
-V2 → v3 retains every mechanical field, original receipt/fact/narration, NPC record,
+V2 → v4 retains every mechanical field, original receipt/fact/narration, NPC record,
 RNG state, journal and game rule. It adds an initial visit count of 1 for the current
 location only; it does **not** invent counts for unrecorded old visits. New receipt
 fields default to empty, meaning “not recorded.” Exact original stock location
 strings are upgraded to the new descriptions, but customized descriptions are not
 replaced. Unknown v2 fields (including mislabeled v3 fields) still fail closed.
 
-Decoding is a read-only migration. The next repository overwrite stores v3 while
-backing up the prior raw v2 snapshot atomically; a v2 backup can be restored through
-the same decoder. Export serializes the migrated v3 snapshot. Older app versions
-will not read v3 exports; retain an original export if you need to roll back.
+V3 → v4 retains all existing adventure fields, including AI opening/history text,
+custom location descriptions, visits, combat, NPCs and quest progress. It adds
+explicit roads matching the established starter/refuge rules and the default
+resource table (herbs plus ore at mountain/ruins, herbs elsewhere). `regionSeed`
+is null; migration does not append generated locations or advance the clock/RNG.
+A custom refuge road becomes an explicit two-way connection. Unknown fields in
+any old schema still fail closed; do not relabel a v4 file as an older version.
+
+Decoding is a read-only migration. The next repository overwrite stores v4 while
+backing up the original raw snapshot atomically; old backups use the same decoder.
+Export serializes the migrated v4 snapshot. Older app versions will not read v4
+exports; retain an original export if you need to roll back.
 
 Database schema v1 does not change: adventure data is part of the JSON aggregate.
 Future schema/format changes still require explicit migrations and fixtures; never
 use destructive Room fallback or silently discard unsupported fields. The original
 v1 example/fixture shape is generated from real codec output in automated tests.
 
-## Opening receipts (app 0.6; portable format remains v3)
+## Opening receipts (introduced in app 0.6; preserved in v4)
 
 A new character can carry a first `ActionRecord` whose ID begins with `opening:`
 and whose `kind` is empty. Existing v3 fields store the visible creation facts,

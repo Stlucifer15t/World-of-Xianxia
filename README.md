@@ -17,9 +17,27 @@ GitHub may require sign-in. **Read the save-export warning below before installi
 **Export your campaign from the old app's Saves screen first.** CI debug APKs can
 have different signing keys. If Android requires uninstalling the old version,
 that deletes private saves. Export first, install the new APK, then import the
-`.xianxia.json`. Version-1 and version-2 saves migrate to v3 without rerolling the player,
+`.xianxia.json`. Version-1, version-2 and version-3 saves migrate to v4 without rerolling the player,
 resetting the adventure, or deleting the journal. Keep the original export if
-you may need to return to an older app; older apps do not read v3 exports. Do not uninstall without an external save copy.
+you may need to return to an older app; older apps do not read v4 exports. Do not uninstall without an external save copy.
+
+## Persistent frontier & exploration (0.7)
+
+- New campaigns get **six seeded wilderness sites**, connected by saved footpaths.
+  The character, starter places, NPCs and AI-opening flow remain intact.
+- **Menu → Map → Survey nearby paths** reveals adjacent destinations in one game
+  hour without travelling. Hidden destination names stay hidden until discovered.
+- Travel follows actual saved roads, with **1–4-hour generated routes** and the
+  existing two-hour starter roads. No normal-play teleporting or automatic journeys.
+- Sites grant herbs, iron ore or both according to saved resource tables. Their
+  three gathering opportunities remain depleted across visits/restarts.
+- Older campaigns expand only after **Extend this world's frontier → Add frontier**.
+  This is one-time, backed up, preserves existing records, and makes no AI request.
+- **Portable v4**, importing v1–v4. Keep your old export for rollback; previous app
+  versions cannot read v4. Room schema remains v1.
+
+This is the first generated-geography increment, not the full NPC/sect-simulation
+milestone. [How exploration and persistence work](docs/PERSISTENT_FRONTIER.md).
 
 ## AI-generated beginnings & regeneration (0.6)
 

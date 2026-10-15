@@ -1,5 +1,19 @@
 # Delivery phases and acceptance gates
 
+## Delivered Phase 4 geography increment (0.7)
+
+New campaigns receive six persistent seeded wilderness sites and footpaths. The
+native regional atlas supports explicit adjacent-path surveying, saved travel
+durations, finite location-specific resources and one-time confirmed expansion of
+older campaigns. No character/combat RNG is consumed by generation; AI narrates
+actual route facts but cannot create roads or rewards. Portable v4 imports v1–v3
+without replacing their worlds. See `PERSISTENT_FRONTIER.md` and `TESTING.md`.
+
+This is bounded generated geography, not completion of Phase 4. Next unfinished
+world/social work is richer persistent NPC populations and sect contribution/
+mission progression, followed by larger faction systems and the Phase 5 console.
+The three existing NPCs, quests and schedules remain functional and unchanged.
+
 ## Delivered AI openings and regeneration (0.6)
 
 Character creation now calls the saved enabled AI provider immediately after
@@ -42,7 +56,7 @@ multiple profiles from the unfinished-feature list, not the rest of Phase 3's
 ongoing adversarial/live-provider acceptance or the larger game backlog.
 
 Remaining next work includes wider provider/manual-device acceptance and the
-unfinished Phase 4 generated-world/social systems, followed by the dedicated
+remaining Phase 4 generated-world/social systems beyond the bounded 0.7 frontier, followed by the dedicated
 Phase 5 editor. Existing bounded world mechanics must be extended, not rebuilt.
 
 ## Story-first refinement (0.3)

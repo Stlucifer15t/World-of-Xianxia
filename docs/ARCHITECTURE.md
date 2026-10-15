@@ -1,5 +1,27 @@
 # Architecture and authority boundaries
 
+## Persistent frontier and versioned geography (0.7)
+
+`WorldGeography` extends—not replaces—`AdventureFactory`. New creation explicitly
+expands the initialized world before attaching the AI opening. Existing campaigns
+load without expansion; the confirmed Map control resolves `EXPAND_WORLD` through
+the engine and revision-checked repository with narration disabled. The provider
+proposal allowlist excludes this administrative operation.
+
+The generator stores six wilderness sites, six connecting roads and a `regionSeed`;
+it uses a separate RNG stream and never consumes combat/character RNG. Branches
+attach only to the current connected component. Persisted routes are now the one
+source for engine travel validation/time, Map buttons and journey descriptions.
+Investigate reveals adjacent destinations; existing ruins knowledge remains.
+Gathering reads each location's validated `forage` table and existing depletion
+counter. NPC schedules still run only through the existing action-time simulation.
+
+Portable **v4** introduces route/seed/forage fields with explicit v1–v3 decoding;
+Room remains v1. A v3 load preserves its opening, history, encounters and mechanics,
+reconstructs old roads, and does not generate new places. First overwrite backs up
+the original JSON. All old strict-schema and independent-slot protections remain.
+See `PERSISTENT_FRONTIER.md`, `SAVE_FORMAT.md` and `TESTING.md` for scope and evidence.
+
 ## AI opening and prose-only regeneration (0.6)
 
 `GameViewModel.create()` waits for encrypted provider preferences to finish loading,

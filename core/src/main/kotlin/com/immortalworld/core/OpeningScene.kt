@@ -1,6 +1,6 @@
 package com.immortalworld.core
 
-/** A creation snapshot in the existing v3 receipt format, not an engine command or a new save schema. */
+/** A creation snapshot in the v3-era receipt fields, not an engine command; geography is versioned separately. */
 object OpeningScene {
     private const val PREFIX = "opening:"
     fun isOpening(record: ActionRecord): Boolean = record.kind.isEmpty() && record.id.startsWith(PREFIX)

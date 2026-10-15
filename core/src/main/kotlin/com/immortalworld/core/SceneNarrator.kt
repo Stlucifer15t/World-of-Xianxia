@@ -108,7 +108,7 @@ object SceneNarrator {
         return listOf(opening + " " + atmosphere(s), people, listOf(last, paths).filter { it.isNotBlank() }.joinToString(" ")).filter { it.isNotBlank() }
     }
     fun route(from: String, to: String): String? = when (setOf(from, to)) {
-        setOf("village", "crossing") -> "The broad mountain road follows the cultivated foothills down toward the river; cart ruts and stretches of paving mark the approach to the ford."
+        setOf("village", "crossing") -> "The broad mountain road connects the cultivated foothills and the river; cart ruts and stretches of paving mark the approach to the ford."
         setOf("crossing", "mountain") -> "A narrower trail connects the river bank to the pine-covered slope, winding between exposed roots and stretches of stony ground."
         setOf("mountain", "ruins") -> "The ridge path threads through the pines toward broken stonework; the last stretch passes weathered fragments before reaching the outer arch."
         setOf("origin", "village") -> "The established refuge road connects to the village's mountain road without passing through another mapped settlement."
