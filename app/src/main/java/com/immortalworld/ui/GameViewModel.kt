@@ -346,7 +346,7 @@ class GameViewModel @JvmOverloads constructor(application: Application,
                 try { knowledge.lookup(config, query) } finally { mutable.update { it.copy(knowledgeWorking = false) } }
             } else KnowledgeResult()
             mutable.update { it.copy(knowledgeResult = refs, streamingRecordId = id, streamingText = "") }
-            val context = (if (opening) OpeningScene.context(active.save, record)
+            val context = (if (opening) OpeningScene.context(record)
                 else ContextBuilder.build(active.save, record.input, record.facts, record)).copy(referenceNotes = refs.references.map { it.context() })
             val prose = CompatibleStoryteller.validateNarration(narrator(config, context) { draft ->
                 if (requestJob.isActive) mutable.update { if (it.streamingRecordId == id) it.copy(streamingText = draft) else it }

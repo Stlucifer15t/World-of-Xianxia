@@ -16,12 +16,14 @@ object OpeningScene {
         val p = s.player
         val realm = s.realms.first { it.id == p.cultivation.realmId }
         val facts = listOf(
-            "Identity: ${p.name}; ${p.race}; ${p.gender}; age ${p.age}.",
+            "Name: ${p.name}",
+            "Identity: ${p.race}; ${p.gender}; age ${p.age}.",
             "Appearance selected by the player: ${p.appearance}",
             "Birthplace: ${p.birthplace}",
             "Background selected by the player: ${p.background}",
             "Personality selected by the player (not permission to invent decisions or thoughts): ${p.personality}",
-            "Starting location: ${s.world.currentLocation}; day ${s.world.day}, hour ${a.hour}.",
+            "Starting location: ${s.world.currentLocation}",
+            "Opening time: day ${s.world.day}, hour ${a.hour}.",
             "Starting scenario selected by the player (story framing, not extra powers or resources): ${s.world.startingCircumstances}",
             "Spiritual root: ${p.spiritualRoot}; constitution: ${p.constitution}; bloodline: ${p.bloodline}.",
             "Potential: ${p.potential}; revealed talents: ${p.talents.joinToString().ifBlank { "None" }}.",
@@ -29,7 +31,7 @@ object OpeningScene {
             "Attributes: ${p.attributes.entries().entries.joinToString { "${it.key} ${it.value}" }}.",
             "Health ${p.health}/${p.maxHealth}; qi ${p.energy}/${p.maxEnergy}; spirit stones ${p.spiritStones}.",
             "Learned arts: ${p.techniques.take(10).joinToString { "${it.name} (${it.rank}, mastery ${it.mastery})" }}.",
-            "Starting possessions: ${p.inventory.take(12).joinToString { "${it.name} x${it.quantity}" }}.",
+            "Starting possessions: ${p.inventory.take(12).joinToString { "${it.name} x${it.quantity}${it.equippedSlot?.let { slot -> " (equipped $slot)" }.orEmpty()}" }}.",
             "Difficulty: ${s.rules.difficulty}. No time, RNG, resources, relationships or quests have advanced for this opening.",
         ).map { it.take(2000) }
         val scene = SceneNarrator.scene(s).joinToString("\n\n")
@@ -39,9 +41,15 @@ object OpeningScene {
         return SaveValidator.validate(s.copy(adventure = a.copy(history = listOf(record))))
     }
 
-    fun context(save: GameSave, record: ActionRecord): NarrativeContext {
+    fun context(record: ActionRecord): NarrativeContext {
         require(isOpening(record))
-        return ContextBuilder.build(save, record.input, record.facts, record).copy(
+        // Do not consult live campaign fields: even a later rename must not rewrite the saved premise.
+        fun fact(prefix: String, fallback: String) = record.facts.firstOrNull { it.startsWith(prefix) }?.removePrefix(prefix) ?: fallback
+        return NarrativeContext(
+            playerName = fact("Name: ", "The player described in the saved creation facts"),
+            location = fact("Starting location: ", "The starting location described in the saved creation facts"),
+            authoritativeFacts = record.facts.take(20), relevantMemories = emptyList(),
+            scene = record.sceneContext, input = record.input,
             pace = "opening", playerSummary = "Saved character-creation snapshot. Use these selections to write the beginning, not a recap of actions. Keep all mechanical state unchanged.",
             recentOpenings = listOfNotNull(record.narration.takeIf { it.isNotBlank() }?.take(180)),
         )

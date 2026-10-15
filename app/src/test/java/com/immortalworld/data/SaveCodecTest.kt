@@ -21,7 +21,7 @@ class SaveCodecTest {
         assertEquals(s, decoded)
         assertEquals(3, decoded.version)
         assertTrue(OpeningScene.isOpening(decoded.copy(id = "imported-copy").adventure!!.history.single()))
-        assertEquals(s.adventure!!.history.single().facts, OpeningScene.context(decoded, decoded.adventure!!.history.single()).authoritativeFacts)
+        assertEquals(s.adventure!!.history.single().facts, OpeningScene.context(decoded.adventure!!.history.single()).authoritativeFacts)
     }
     private fun rejects(json: String) { assertThrows(IllegalArgumentException::class.java) { SaveCodec.decode(json) } }
     @Test fun completeSnapshotRoundTrips() { val s = sample(); assertEquals(s, SaveCodec.decode(SaveCodec.encode(s))) }

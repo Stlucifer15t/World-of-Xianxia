@@ -21,7 +21,7 @@ class OpeningSceneTest {
                 journal = listOf(JournalEntry("private", 1, "PRIVATE_JOURNAL")))) }
         val opening = OpeningScene.attach(s)
         val record = opening.adventure!!.history.single()
-        val context = OpeningScene.context(opening, record)
+        val context = OpeningScene.context(record)
         val all = context.toString()
         listOf("Yue", "A worn jade clasp", "Exiled cartographer", "Patient and curious", "Reed Province", "Moon Fox", "Agender", "23",
             "Reed Harbour", "A missing map and a sealed ferry gate", s.player.spiritualRoot, s.player.constitution,
@@ -35,8 +35,8 @@ class OpeningSceneTest {
     @Test fun regenerationContextUsesSavedOriginNotLaterStatsOrLocation() {
         val s = OpeningScene.attach(CoreChecks.sample())
         val record = s.adventure!!.history.single()
-        val changed = s.copy(player = s.player.copy(bloodline = "LATER_BLOODLINE"), world = s.world.copy(currentLocation = "Later land"))
-        assertEquals(OpeningScene.context(s, record), OpeningScene.context(changed, record))
+        val changed = s.copy(player = s.player.copy(name = "LATER_NAME", bloodline = "LATER_BLOODLINE"), world = s.world.copy(currentLocation = "Later land"))
+        assertEquals(OpeningScene.context(record), OpeningScene.context(changed.adventure!!.history.single()))
         assertTrue(OpeningScene.isOpening(record.copy(id = record.id)))
         assertTrue(OpeningScene.isOpening(s.copy(id = "imported-copy").adventure!!.history.single()))
     }

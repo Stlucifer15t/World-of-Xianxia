@@ -183,6 +183,38 @@ class OpeningFlowTest {
         assertEquals(before, runBlocking { app.saves.load(before.id).save })
         assertEquals(mechanics(duplicate), mechanics(active()))
     }
+    @Test fun legacyUntouchedSaveOffersExplicitOpeningWithoutAutomaticProviderUse() {
+        val g = CharacterGenerator.generate(CreationOptions(background = "Exiled cartographer"), 42, "legacy-player")
+        val old = GameSave(id = UUID.randomUUID().toString(), name = "Legacy untouched start", createdAt = 1, updatedAt = 1,
+            randomState = g.randomState, player = g.character,
+            world = WorldState("legacy-world", currentLocation = "Azure Cloud Village", startingCircumstances = "A missing map"))
+        slots.add(old.id)
+        runBlocking { app.saves.create(old) }
+        ui { model.load(old.id) }; idle()
+        val before = active()
+        assertTrue(requests.isEmpty()); assertTrue(before.adventure!!.history.isEmpty())
+        regenerate(); idle()
+        assertEquals(1, requests.size)
+        assertTrue(requests.single().authoritativeFacts.joinToString().contains("Exiled cartographer"))
+        val after = active()
+        assertEquals(before.copy(updatedAt = 0), after.copy(updatedAt = 0, adventure = after.adventure!!.copy(history = emptyList())))
+        assertEquals(first, after.adventure!!.history.single().narration)
+    }
+    @Test fun cancellingFirstOpeningKeepsDurableCharacterAndReloadDoesNotSpendAgain() {
+        handler = { _, preview -> preview("The unfinished first opening."); awaitCancellation() }
+        ui { model.create("Cancelled first opening") }
+        waitFor { model.state.value.streamingText == "The unfinished first opening." }
+        val before = active()
+        assertTrue(before.adventure!!.history.single().narration.isBlank())
+        compose.onNodeWithText("Cancel AI request").performClick(); idle()
+        assertEquals(before, runBlocking { app.saves.load(before.id).save })
+        replaceModel(); waitFor { model.state.value.aiReady }
+        ui { model.load(before.id) }; idle()
+        assertEquals(1, requests.size); assertEquals(before, active())
+        handler = { _, _ -> second }
+        regenerate(); idle()
+        assertEquals(2, requests.size); assertEquals(mechanics(before), mechanics(active()))
+    }
     @Test fun latestActionRegenerationNeverReplaysItsTimeOrMechanics() {
         ui { model.create("Action regeneration") }; idle()
         ui { model.command(GameAction(ActionKind.REST), "Rest") }; idle()

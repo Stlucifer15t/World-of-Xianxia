@@ -22,10 +22,10 @@ class AiProviderTest {
             randomState = g.randomState, player = g.character.copy(hiddenTraits = listOf("PRIVATE_TRAIT")),
             world = WorldState("world", currentLocation = "Reed Harbour", startingCircumstances = "A sealed ferry gate",
                 journal = listOf(JournalEntry("private", 1, "PRIVATE_JOURNAL")))))
-        val c = OpeningScene.context(s, s.adventure!!.history.single())
+        val c = OpeningScene.context(s.adventure!!.history.single())
         MockWebServer().use { server ->
             server.start()
-            val chunk = JSONObject().put("choices", JSONArray().put(JSONObject().put("delta", JSONObject().put("content", "River mist brushes the jade clasp."))))
+            val chunk = JSONObject().put("choices", JSONArray().put(JSONObject().put("delta", JSONObject().put("content", "River mist brushes the jade clasp.")).put("finish_reason", "stop")))
             server.enqueue(MockResponse().setHeader("Content-Type", "text/event-stream").setBody("data: $chunk\n\ndata: [DONE]\n\n"))
             val drafts = mutableListOf<String>()
             assertEquals("River mist brushes the jade clasp.", provider(server).narrateStreaming(c) { drafts.add(it) })
