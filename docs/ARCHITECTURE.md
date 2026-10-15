@@ -1,5 +1,25 @@
 # Architecture and authority boundaries
 
+## Stream completion compatibility (0.7.1)
+
+`ChatStream` accepts explicit model completion followed by either `[DONE]` or clean
+EOF. A completion-only event may omit its delta, optional unused tool fields may
+be null/empty, and the final SSE line need not end in a newline. The loop tests
+DONE before probing the socket again. Bounded line/frame reads allow escaped
+Unicode without the old 16-KiB frame restriction; ceilings remain 64 KiB/frame,
+512 KiB/transfer and 6,000 story characters. Actual tool requests, late content,
+truncation, malformed data and interrupted reads still fail closed.
+
+`ChatResponse` shares safe finish-reason/tool validation with non-streaming JSON.
+`AiTransport` preserves locally authored diagnostics instead of collapsing output
+limits and parser failures into one generic message. Provider error text, raw
+bodies and credentials are never incorporated into these messages. No automatic
+paid retry/fallback is added; the existing saved-state/preview boundaries remain.
+Story/action requests honor the configured output ceiling and provider metadata;
+style instructions, not a hidden smaller token cap, govern narrative pacing.
+Connection tests remain eight-token, non-streaming access checks. No save schema
+or stored profile values change.
+
 ## Persistent frontier and versioned geography (0.7)
 
 `WorldGeography` extends—not replaces—`AdventureFactory`. New creation explicitly

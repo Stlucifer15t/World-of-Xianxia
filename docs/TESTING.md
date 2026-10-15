@@ -1,6 +1,55 @@
 # Immortal World verification and device acceptance
 
-## Current persistent-frontier build — 2026-10-15
+## Current streaming-compatibility fix — 2026-10-15
+
+[Run 38697112350](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38697112350) passed for code commit
+`c19b946dd1dc92a98f83ac4c088c6944be1991b1` (version **0.7.1-streaming-compatibility**, version code 9).
+[Download the tested APK ZIP](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38697112350/artifacts/11954771913).
+
+| Check | Actual result |
+|---|---|
+| Build / debug APK | Passed, uploaded |
+| Unit tests | **176 passed; 0 failures/errors/skips** |
+| API 26 instrumentation | **42 passed; 0 failures/errors/skips** |
+| API 35 instrumentation | **42 passed; 0 failures/errors/skips** |
+| Lint | 0 errors; 14 non-error findings |
+| Portable / Room schemas | v4 / v1, unchanged |
+
+The reported screenshot shows a successful short Gemini connection test and a
+failed opening with the old generic parser error. It does **not** expose the exact
+server response or finish reason. The fix addresses independently reproducible
+compatible-stream failures; it does not claim to have captured or tested that
+Gemini 3.5 account response. No account credentials were requested or logged.
+
+Twelve new protocol/HTTP tests cover explicit stop plus clean EOF without DONE,
+completion-only events without delta, LF/CRLF and absent final newline, avoiding a
+post-DONE socket read, rejecting missing completion and late content, distinct
+length/blocking/empty/error diagnostics, null/empty optional tool metadata versus
+real tool calls, escaped Unicode within larger bounded frames, size/transfer limits,
+interrupted reads, reasoning exclusion, actual opening HTTP payloads, no automatic
+fallback, configured output budgets across pacing/action requests, the unchanged
+eight-token access test, and non-streaming guards.
+
+One new device flow on **each** API runs the real stream parser at the controlled
+narrator boundary: save a completed opening without DONE, reject an output-limited
+replacement with actionable guidance, verify unchanged stored character/prose,
+then explicitly regenerate successfully. The existing cancellation/late-token,
+privacy, migration, frontier and UI suites remain included. Device totals are
+19 repository tests, 17 UI/lifecycle tests and six encrypted-provider tests.
+
+All tests ran on GitHub Actions. Physical-device and live-provider acceptance
+remain separate. A connection test is intentionally tiny and non-streaming;
+it does not certify long-story streaming or model thinking/output budgets.
+Try the saved opening again; if output-limited, adjust Maximum output within the
+provider's supported limit, save and explicitly retry. Streaming can also be
+switched off in Limits. No automatic additional paid request was added.
+
+Evidence: `verification-streaming-compatibility-2026-10-15.json`.
+GitHub-reported APK ZIP SHA-256:
+`17255d76359d0c77b36b10a57b7f68ed0337306fefa42a72dabf24c6578f691f` (archive digest, not an independently measured APK hash).
+Export campaigns before any uninstall required by debug signing differences.
+
+## Previously verified persistent-frontier build — 2026-10-15
 
 [Run 38674189128](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38674189128) passed for code commit
 `cb2af4dd35af6326d85b53555d3548b17374ca3e` (version **0.7.0-persistent-frontier**, version code 8).

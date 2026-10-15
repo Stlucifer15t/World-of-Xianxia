@@ -4,11 +4,11 @@ Native Kotlin/Jetpack Compose xianxia RPG with a **story-first, player-controlle
 adventure**, an authoritative offline game engine, optional AI narration, and
 portable saves. This extends the tested Phase 1 app rather than replacing it.
 
-**Verified build:** 0.7.0 persistent frontier, code commit `cb2af4d`.
+**Verified build:** 0.7.1 streaming compatibility, code commit `c19b946`.
 
-[Download the tested APK (ZIP)](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38674189128/artifacts/11945795984) · [Successful build and tests](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38674189128)
+[Download the tested APK (ZIP)](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38697112350/artifacts/11954771913) · [Successful build and tests](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38697112350)
 
-164 unit tests and 41 device tests on **each** of API 26/API 35 passed. Lint has
+176 unit tests and 42 device tests on **each** of API 26/API 35 passed. Lint has
 zero errors and 14 non-error findings. Extract `app-debug.apk` from the ZIP.
 GitHub may require sign-in. **Read the save-export warning below before installing.**
 
@@ -20,6 +20,18 @@ that deletes private saves. Export first, install the new APK, then import the
 `.xianxia.json`. Version-1, version-2 and version-3 saves migrate to v4 without rerolling the player,
 resetting the adventure, or deleting the journal. Keep the original export if
 you may need to return to an older app; older apps do not read v4 exports. Do not uninstall without an external save copy.
+
+## Streaming compatibility correction (0.7.1)
+
+Completed compatible streams no longer fail solely because they omit `[DONE]` or
+a terminal text delta. Output truncation, blocking, empty replies and interrupted
+connections now give distinct, safe recovery guidance. Actual partial responses
+are still rejected; saved character data and previous good prose are preserved.
+
+Story/action requests honor the saved output limit rather than silently applying
+a smaller task cap. The short connection test remains an access check, not proof
+that a full streamed opening will succeed. No automatic paid retry or credential
+logging was added. See [recovery steps](docs/AI_SETTINGS.md#if-connection-testing-succeeds-but-the-opening-fails).
 
 ## Persistent frontier & exploration (0.7)
 

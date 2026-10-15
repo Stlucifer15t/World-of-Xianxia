@@ -1,0 +1,115 @@
+{
+  "verified_on": "2026-10-15",
+  "application_version": "0.7.1-streaming-compatibility",
+  "repository": "Stlucifer15t/World-of-Xianxia",
+  "branch": "arena/b0b240be-world-of-xianxia",
+  "code_commit": "c19b946dd1dc92a98f83ac4c088c6944be1991b1",
+  "run_id": 38697112350,
+  "run_url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38697112350",
+  "conclusion": "success",
+  "unit_tests": {
+    "core": 34,
+    "adventure": 30,
+    "story": 15,
+    "save_codec": 33,
+    "ai_adapter_mock_server": 11,
+    "total": 176,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "ai_upgrade_mock_server_and_fixtures": 20,
+    "custom_api_endpoint_regressions": 7,
+    "opening_snapshots": 5,
+    "persistent_geography": 9,
+    "streaming_compatibility": 12
+  },
+  "emulator_tests": [
+    {
+      "api": 26,
+      "persistence": 19,
+      "compose": 17,
+      "total": 42,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "encrypted_ai_preferences": 6
+    },
+    {
+      "api": 35,
+      "persistence": 19,
+      "compose": 17,
+      "total": 42,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "encrypted_ai_preferences": 6
+    }
+  ],
+  "lint": {
+    "errors": 0,
+    "other_findings": 14
+  },
+  "save_format": {
+    "exports": 4,
+    "imports": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "room_database_schema": 1,
+    "room_schema_file_sha256": "8a2fa3d84ff99a951ce4ddffebe55999562ab93dcf2312a6db3483999da45d2c"
+  },
+  "apk_artifact": {
+    "id": 11954771913,
+    "name": "immortal-world-debug-apk",
+    "url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38697112350/artifacts/11954771913",
+    "size_in_bytes": 12555068,
+    "archive_sha256": "17255d76359d0c77b36b10a57b7f68ed0337306fefa42a72dabf24c6578f691f",
+    "digest_source": "GitHub artifact API; archive digest, not an independently measured APK digest"
+  },
+  "verified_additions": [
+    "Explicit stop with clean EOF accepted without optional DONE or terminal delta",
+    "DONE short-circuits socket reading; final line, CRLF and bounded escaped Unicode handled",
+    "Null or empty unused tool metadata accepted, actual tool invocation and late content rejected",
+    "Missing completion, network interruption, length truncation, blocking, empty text and malformed data distinguished safely",
+    "Configured output budget honored for all story paces and action requests; access test remains eight tokens",
+    "Actual HTTP opening and error-path tests prove no automatic paid fallback or retry",
+    "Parser-to-ViewModel recovery flow preserves saved prose and character across output-limited regeneration on both APIs",
+    "All existing saves, frontier, gameplay, AI opening, encryption, endpoint and UI regressions retained"
+  ],
+  "remaining_manual_acceptance": [
+    "Physical-phone install, SAF providers, force-stop, rotation, TalkBack, IME and larger accessibility fonts",
+    "Live compatible AI provider with user-supplied credentials, network recovery and measured response latency",
+    "Live accessible Fandom/MediaWiki/custom-source/SearXNG behavior",
+    "Physical-device Android Keystore and profile review",
+    "Live CrowLLM account access and its actual model catalog with user-owned credentials",
+    "Live opening quality based on selected premise, first-request/regeneration cancellation and lifecycle on a physical phone",
+    "Physical-phone frontier surveying/travel/resource depletion, long sessions and v4 SAF export/import; live-provider journey grounding",
+    "Retry affected Gemini opening on user-owned account; inspect specific diagnostic if it still fails and verify configured output budget is adequate"
+  ],
+  "not_implemented": [
+    "Full graphical God Mode/world editor",
+    "Large procedural worlds and autonomous NPC plots",
+    "Advanced sect management, group combat and arbitrary generated mechanics",
+    "Production signing",
+    "Native non-chat-completions generation protocols",
+    "Exact per-model tokenizer accounting",
+    "Whole-site crawling or protected-site bypass (intentionally excluded)",
+    "On-device GGUF inference or native Cloudflare account configuration",
+    "Selectable higher-realm creation or independent decorative root-quality mechanics",
+    "Generated frontier NPC populations, new quest chains, advanced encounters and sect contribution/mission/leadership progression"
+  ],
+  "preview_artifact": {
+    "id": 11955167308,
+    "url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38697112350/artifacts/11955167308",
+    "name": "device-test-reports-api-35"
+  },
+  "version_code": 9,
+  "test_boundaries": {
+    "reported_symptom": "Screenshot: Gemini connection test passed; opening failed with generic malformed/too-large/incomplete parser message",
+    "unconfirmed_live_cause": "Screenshot contains no raw response or finish reason. Exact live model failure is not established.",
+    "provider_wire": "Compatible-protocol fixtures and actual adapter against MockWebServer; no captured Gemini 3.5 traffic or live paid credentials",
+    "device_tests": "Actual Compose and Room with controlled narrator and real ChatStream parser for recovery; all existing regressions retained"
+  }
+}

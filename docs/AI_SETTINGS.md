@@ -149,9 +149,13 @@ APIs expose **no** context capacity; this is shown as unknown rather than invent
   labeled **not a verified model limit**. Check its documentation and edit it.
 - **Maximum output · tokens** is separate (1–16,000, smaller than the context
   window). It is an upper ceiling, not a command to generate that many tokens.
-- Existing task pacing remains: up to 500 output tokens for interpretation, 650
-  for brief narration and 1,200 for openings/scenes, capped by the configured maximum and
-  a known provider output ceiling. Saved narration remains capped at 6,000 chars.
+- As of 0.7.1, story and action requests honor the saved maximum (and any known
+  provider output ceiling); the previous hidden 500/650/1,200-token task ceilings
+  are removed. Pacing still comes from the prompt. The access test remains eight
+  tokens. Saved narration is still capped at 6,000 characters.
+- Some models count thinking tokens against the completion budget. An explicit
+  output-limit error now recommends increasing **Maximum output**, saving and
+  retrying. No setting is increased for you and no paid request is retried for you.
 
 A larger context number does not upload the full save or all campaign history.
 The same relevant context remains bounded. A conservative UTF-8-byte estimate plus
@@ -174,9 +178,18 @@ clearly labeled **unverified / not saved**. Structured action proposals are neve
 executed incrementally. Only a complete response that passes the existing
 numeric/agency/size guards is committed as narration.
 
-Truncation, missing stream termination, tool-call frames, oversized frames,
-provider errors and cancellation discard the preview. The durable offline result
-remains intact. JSON responses from endpoints that ignore the stream request are
+Completion requires an explicit `finish_reason=stop`. Compatible streams may then
+end cleanly without `[DONE]`, and their completion-only event may omit `delta`.
+A final line need not have a newline. When `[DONE]` is present, the parser stops
+without probing a still-open socket again. Null/empty unused tool-call metadata
+is accepted; actual tool invocations are not. Frames are bounded to 64 KiB, total
+transfer to 512 KiB and story text to 6,000 characters.
+
+EOF or `[DONE]` without model completion, network interruption, output truncation,
+actual tool calls, malformed/oversized frames, provider errors and cancellation
+still discard the preview. The previous accepted prose and engine state remain
+intact. Diagnostics distinguish output limits, provider blocking, empty replies,
+interruption and incompatible framing, without exposing response bodies or keys. JSON responses from endpoints that ignore the stream request are
 accepted as a single response. If the provider rejects streaming, turn it off and
 retry **narration only**; there is no automatic second paid POST.
 
@@ -184,6 +197,20 @@ Pooling and streaming improve client overhead and time to visible text; they
 cannot guarantee a particular provider's latency. Real-model prose quality and
 semantic fidelity still need review; regex/size guards are not a proof that every
 sentence agrees with game facts.
+
+## If connection testing succeeds but the opening fails
+
+The connection test checks access with a tiny **non-streaming** reply; it cannot
+prove that a substantial streamed story will finish. On 0.7.1, retry the saved
+opening first. If the error reports the output limit, raise **Limits → Maximum
+output** within the model's supported limit (for example, 4,096), then save. Some
+models spend part of that budget on thinking, not visible prose.
+
+For streaming incompatibility, switch off **Show responses as they arrive**, save
+and explicitly retry narration. There is no automatic non-streaming fallback or
+second charge. No response, credential or error-body logging was added. The fix
+is tested against compatible protocol fixtures, not a captured Gemini 3.5 account
+response; real-provider behavior remains a separate acceptance check.
 
 ## Optional cultivation knowledge
 
