@@ -1,8 +1,10 @@
 package com.immortalworld.ui
 
 import android.graphics.Bitmap
-import android.os.ParcelFileDescriptor
-import androidx.test.platform.app.InstrumentationRegistry
+import android.util.Base64
+import android.util.Log
+import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.CompositionLocalProvider
@@ -23,7 +25,6 @@ import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class CultivationDesignFlowTest {
@@ -31,13 +32,15 @@ class CultivationDesignFlowTest {
     private fun shot(name: String) {
         compose.waitForIdle()
         val image = compose.onRoot().captureToImage().asAndroidBitmap()
-        val directory = File(compose.activity.filesDir, "ui-previews").apply { mkdirs() }
         val small = Bitmap.createScaledBitmap(image, 420, (image.height * 420f / image.width).toInt(), true)
-        File(directory, "$name.jpg").outputStream().use { small.compress(Bitmap.CompressFormat.JPEG, 72, it) }
-        // AGP removes app data after tests. Copy test-only previews as shell before that cleanup.
-        val command = "sh -c 'mkdir -p /data/local/tmp/immortal-world-previews && run-as com.immortalworld cat files/ui-previews/$name.jpg > /data/local/tmp/immortal-world-previews/$name.jpg'"
-        val descriptor = InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(command)
-        ParcelFileDescriptor.AutoCloseInputStream(descriptor).use { it.readBytes() }
+        val bytes = ByteArrayOutputStream().apply { small.compress(Bitmap.CompressFormat.JPEG, 72, this) }.toByteArray()
+        // Bounded test-only image transport. AGP removes app files after instrumentation;
+        // logcat survives that cleanup and is collected before the emulator shuts down.
+        val chunks = Base64.encodeToString(bytes, Base64.NO_WRAP).chunked(2400)
+        chunks.forEachIndexed { index, chunk ->
+            Log.i("IW_UI_PREVIEW", JSONObject().put("file", "$name.jpg").put("part", index + 1)
+                .put("parts", chunks.size).put("base64", chunk).toString())
+        }
     }
     @Test fun narrowCultivationRecordsAndSettingsNavigationPreserveEngineData() {
         lateinit var model: GameViewModel

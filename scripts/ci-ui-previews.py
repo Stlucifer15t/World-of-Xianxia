@@ -4,7 +4,38 @@ Only generated instrumented-test screens are captured; never a user's device or 
 """
 import base64
 import json
+import re
+import sys
 from pathlib import Path
+
+directory = Path('app/build/outputs/ui-previews')
+log = directory / 'capture.log'
+if log.exists():
+    images = {}
+    for line in log.read_text(errors='replace').splitlines():
+        match = re.search(r'IW_UI_PREVIEW\s*: (\{.*\})', line)
+        if not match:
+            continue
+        try:
+            item = json.loads(match.group(1))
+            name = item['file']
+            if not re.fullmatch(r'[a-z-]+\.jpg', name) or not 1 <= item['part'] <= item['parts'] <= 100:
+                continue
+            images.setdefault(name, {})[item['part']] = item
+        except (ValueError, KeyError, TypeError):
+            continue
+    for name, chunks in images.items():
+        parts = next(iter(chunks.values()))['parts']
+        if set(chunks) != set(range(1, parts + 1)):
+            print(f'::warning::Incomplete native preview: {name}')
+            continue
+        data = base64.b64decode(''.join(chunks[i]['base64'] for i in range(1, parts + 1)), validate=True)
+        if len(data) <= 160_000:
+            (directory / name).write_bytes(data)
+    if not images:
+        print('::warning::No native preview frames were captured.')
+if '--decode-only' in sys.argv:
+    sys.exit(0)
 
 for path in sorted(Path('app/build/outputs/ui-previews').glob('*.jpg'))[:6]:
     data = path.read_bytes()
