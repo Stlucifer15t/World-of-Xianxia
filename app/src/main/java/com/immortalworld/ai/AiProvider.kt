@@ -21,7 +21,7 @@ class CompatibleStoryteller(private val config: AiConfig,
     private val allowHttpForTests: Boolean = false,
 ) : Storyteller {
     companion object {
-        val allowed = ActionKind.entries.filter { it !in setOf(ActionKind.SIMULATION_MODE, ActionKind.ENABLE_OFFLINE, ActionKind.DISABLE_OFFLINE, ActionKind.CLAIM_OFFLINE) }.map { it.name }.toSet()
+        val allowed = ActionKind.entries.filter { it !in setOf(ActionKind.SIMULATION_MODE, ActionKind.ENABLE_OFFLINE, ActionKind.DISABLE_OFFLINE, ActionKind.CLAIM_OFFLINE, ActionKind.EXPAND_WORLD) }.map { it.name }.toSet()
         fun validate(config: AiConfig, allowHttp: Boolean = false, requireModel: Boolean = true) {
             AiEndpoints.resolve(config.endpoint, allowHttp)
             require((!requireModel || config.model.isNotBlank()) && config.model.length <= 200 && config.endpoint.length <= 500) { "Enter a model ID (up to 200 characters)." }

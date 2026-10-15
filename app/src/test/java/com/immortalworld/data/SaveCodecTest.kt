@@ -13,15 +13,74 @@ class SaveCodecTest {
             world = WorldState("world-1", currentLocation = "Jade River", startingCircumstances = "A beginning.",
                 journal = listOf(JournalEntry("entry-1", 1, "A promise: \"return\".\nWith a new line."))))
     }
-    @Test fun savedOpeningAndRegeneratedProseRoundTripInExistingV3Format() {
+    @Test fun savedOpeningAndRegeneratedProseRoundTripInCurrentFormat() {
         val initial = OpeningScene.attach(sample())
         val a = initial.adventure!!
         val s = initial.copy(adventure = a.copy(history = a.history.map { it.copy(narration = "The river mist parts around the ferry gate.") }))
         val decoded = SaveCodec.decode(SaveCodec.encode(s))
         assertEquals(s, decoded)
-        assertEquals(3, decoded.version)
+        assertEquals(4, decoded.version)
         assertTrue(OpeningScene.isOpening(decoded.copy(id = "imported-copy").adventure!!.history.single()))
         assertEquals(s.adventure!!.history.single().facts, OpeningScene.context(decoded.adventure!!.history.single()).authoritativeFacts)
+    }
+    private fun versionThree(s: GameSave): JSONObject = JSONObject(SaveCodec.encode(s)).put("version", 3).apply {
+        getJSONObject("adventure").apply {
+            remove("routes"); remove("regionSeed")
+            val locations = getJSONArray("locations")
+            for (i in 0 until locations.length()) locations.getJSONObject(i).remove("forage")
+        }
+    }
+    @Test fun v3OpeningMigratesWithoutRerollingOrAutomaticallyExpanding() {
+        val s = OpeningScene.attach(sample())
+        val restored = SaveCodec.decode(versionThree(s).toString())
+        assertEquals(s, restored)
+        assertNull(restored.adventure!!.regionSeed)
+        assertEquals(s.adventure!!.history, restored.adventure!!.history)
+        assertEquals(WorldGeography.legacyRoutes(s.adventure!!.locations), restored.adventure!!.routes)
+    }
+    @Test fun v3ActiveCombatCustomSceneryAndRngContinueIdentically() {
+        val engine = AdventureEngine { 1000L }
+        val s = engine.execute(AdventureFactory.ensure(sample()), GameAction(ActionKind.OBSERVE), "Observe", "look").state
+        val edited = s.copy(adventure = s.adventure!!.copy(locations = s.adventure!!.locations.map { it.copy(description = "Custom terrain: " + it.name) }))
+        val original = engine.execute(edited.copy(world = edited.world.copy(currentLocation = "Azure Cloud Village"), adventure = edited.adventure!!.copy(locationId = "village")),
+            GameAction(ActionKind.CHALLENGE, "wen"), "Challenge", "duel").state
+        val migrated = SaveCodec.decode(versionThree(original).toString())
+        assertEquals(original, migrated)
+        assertEquals(engine.apply(original, GameAction(ActionKind.DEFEND)), engine.apply(migrated, GameAction(ActionKind.DEFEND)))
+    }
+    @Test fun generatedRoutesSeedDiscoveryAndResourceDepletionRoundTripExactly() {
+        val engine = AdventureEngine { 1000L }
+        var s = WorldGeography.expand(sample())
+        s = engine.execute(s, GameAction(ActionKind.INVESTIGATE), "Survey", "survey").state
+        s = engine.execute(s, GameAction(ActionKind.SEARCH), "Gather", "gather").state
+        assertEquals(s, SaveCodec.decode(SaveCodec.encode(s)))
+        listOf(Long.MIN_VALUE, 0L, Long.MAX_VALUE).forEach { seed ->
+            val changed = s.copy(adventure = s.adventure!!.copy(regionSeed = seed))
+            assertEquals(changed, SaveCodec.decode(SaveCodec.encode(changed)))
+        }
+    }
+    @Test fun v4RequiresTypedRouteAndResourceFieldsAndRejectsDanglingLinks() {
+        val s = WorldGeography.expand(sample())
+        fun corrupt(edit: (JSONObject) -> Unit) { val root = JSONObject(SaveCodec.encode(s)); edit(root.getJSONObject("adventure")); rejects(root.toString()) }
+        for (key in listOf("routes", "regionSeed")) corrupt { it.remove(key) }
+        corrupt { it.put("regionSeed", "42") }
+        corrupt { it.put("regionSeed", 1.5) }
+        corrupt { it.getJSONArray("locations").getJSONObject(0).remove("forage") }
+        corrupt { it.getJSONArray("locations").getJSONObject(0).put("forage", "free_immortal_treasure") }
+        corrupt { it.getJSONArray("routes").getJSONObject(0).put("hours", "2") }
+        corrupt { it.getJSONArray("routes").getJSONObject(0).put("hours", 0) }
+        corrupt { it.getJSONArray("routes").getJSONObject(0).put("to", "missing") }
+        corrupt { it.getJSONArray("routes").getJSONObject(0).put("secretShortcut", true) }
+        corrupt { it.getJSONArray("routes").put(it.getJSONArray("routes").getJSONObject(0)) }
+    }
+    @Test fun oldSchemaCannotSmuggleNewGenerationOrLootFields() {
+        val s = AdventureFactory.ensure(sample())
+        val v3 = versionThree(s)
+        v3.getJSONObject("adventure").put("regionSeed", 42)
+        rejects(v3.toString())
+        val other = versionThree(s)
+        other.getJSONObject("adventure").getJSONArray("locations").getJSONObject(0).put("forage", "ore")
+        rejects(other.toString())
     }
     private fun rejects(json: String) { assertThrows(IllegalArgumentException::class.java) { SaveCodec.decode(json) } }
     @Test fun completeSnapshotRoundTrips() { val s = sample(); assertEquals(s, SaveCodec.decode(SaveCodec.encode(s))) }
@@ -75,7 +134,7 @@ class SaveCodecTest {
         val original = sample()
         val json = JSONObject(SaveCodec.encode(original)).put("version", 1).apply { remove("adventure") }.toString()
         val migrated = SaveCodec.decode(json)
-        assertEquals(3, migrated.version)
+        assertEquals(4, migrated.version)
         assertEquals(original.player, migrated.player); assertEquals(original.world, migrated.world)
         assertEquals(original.randomState, migrated.randomState); assertNull(migrated.adventure)
         val initialized = AdventureFactory.ensure(migrated)
@@ -105,6 +164,9 @@ class SaveCodecTest {
 
     private fun versionTwo(s: GameSave): JSONObject = JSONObject(SaveCodec.encode(s)).put("version", 2).apply {
         getJSONObject("adventure").apply {
+            remove("routes"); remove("regionSeed")
+            val locations = getJSONArray("locations")
+            for (i in 0 until locations.length()) locations.getJSONObject(i).remove("forage")
             remove("visits")
             val history = getJSONArray("history")
             for (i in 0 until history.length()) listOf("kind", "locationId", "story", "dialogue", "sceneContext").forEach { history.getJSONObject(i).remove(it) }
@@ -114,7 +176,7 @@ class SaveCodecTest {
         val base = sample().let { it.copy(world = it.world.copy(currentLocation = "Azure Cloud Village")) }
         val old = AdventureEngine().execute(base, GameAction(ActionKind.TALK, "mei", "Ask Mei about Moonfall"), "Ask Mei about Moonfall", "talk").state
         val migrated = SaveCodec.decode(versionTwo(old).toString())
-        assertEquals(3, migrated.version)
+        assertEquals(4, migrated.version)
         assertEquals(old.player, migrated.player); assertEquals(old.world, migrated.world); assertEquals(old.rules, migrated.rules)
         assertEquals(old.randomState, migrated.randomState); assertEquals(old.adventure!!.npcs, migrated.adventure!!.npcs)
         assertEquals(old.adventure!!.quests, migrated.adventure!!.quests); assertEquals(old.adventure!!.events, migrated.adventure!!.events)

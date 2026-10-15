@@ -252,8 +252,14 @@ internal fun AdventureLibrary(state: GameUiState, model: GameViewModel) {
     val s = state.active?.save ?: return
     val a = s.adventure ?: return
     val ready = !state.busy
+    var confirmExpansion by rememberSaveable(s.id) { mutableStateOf(false) }
+    if (confirmExpansion) AlertDialog(onDismissRequest = { confirmExpansion = false },
+        title = { Text("Extend this world's frontier?") },
+        text = { Text("Add six persistent wilderness locations and connecting footpaths once. Existing places, people, quests and your character stay intact. This does not discover every destination or move you, costs no resources, and makes no AI request. A previous-save backup is kept.") },
+        confirmButton = { TextButton(onClick = { confirmExpansion = false; model.expandWorld() }, enabled = ready, modifier = Modifier.testTag("confirm_frontier")) { Text("Add frontier") } },
+        dismissButton = { TextButton(onClick = { confirmExpansion = false }) { Text("Keep existing world") } })
     LazyColumn(Modifier.testTag("library_${state.screen.name.lowercase()}"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item { Heading(when (state.screen) { Screen.TECHNIQUES -> "PAVILION OF ARTS"; Screen.INVENTORY -> "THE TREASURE POUCH"; Screen.QUESTS -> "SECT & WORLD AFFAIRS"; else -> "JADE RECORDS" }, state.screen.name.lowercase().replaceFirstChar { it.uppercase() }, "Day ${s.world.day} · ${a.hour}:00 · ${s.world.currentLocation}") }
+        item { Heading(when (state.screen) { Screen.TECHNIQUES -> "PAVILION OF ARTS"; Screen.INVENTORY -> "THE TREASURE POUCH"; Screen.QUESTS -> "SECT & WORLD AFFAIRS"; Screen.MAP -> "REGIONAL ATLAS"; else -> "JADE RECORDS" }, state.screen.name.lowercase().replaceFirstChar { it.uppercase() }, "Day ${s.world.day} · ${a.hour}:00 · ${s.world.currentLocation}") }
         if (state.screen == Screen.INVENTORY) {
             item { Text("${s.player.spiritStones} spirit stones. Buy/sell through nearby NPCs or the text input.") }
             items(s.player.inventory, key = { it.id }) { item -> Panel {
@@ -276,13 +282,33 @@ internal fun AdventureLibrary(state: GameUiState, model: GameViewModel) {
             TextButton(onClick = { model.navigate(Screen.CULTIVATION) }) { Text("Practice techniques") }
         } }
         if (state.screen == Screen.MAP) {
-            item { Text("Travel takes two hours along adjacent roads. Investigate the crossing/mountain or ask a knowledgeable NPC to discover Moonfall.") }
-            items(a.locations, key = { it.id }) { location -> Panel {
-                Text(if (location.discovered || location.id == a.locationId) location.name else "Unexplored site", style = MaterialTheme.typography.titleMedium)
-                if (location.discovered || location.id == a.locationId) {
-                    Text(location.description); Text("Danger ${location.danger} · Roads: ${AdventureEngine.neighbors(location.id).mapNotNull { id -> a.locations.firstOrNull { it.id == id }?.name }.joinToString()}")
-                    if (location.id in AdventureEngine.neighbors(a.locationId)) SceneNarrator.route(a.locationId, location.id)?.let { Text(it, fontSize = 17.sp, lineHeight = 26.sp) }
-                    Button(onClick = { model.command(GameAction(ActionKind.TRAVEL, location.id), "Travel to ${location.name}") }, enabled = ready && a.combat == null && location.id != a.locationId && (s.rules.godMode || location.id in AdventureEngine.neighbors(a.locationId))) { Text(if (location.id == a.locationId) "Current location" else "Travel · 2 hours") }
+            item { Panel {
+                Text("THE PATHS BEYOND", style = MaterialTheme.typography.titleLarge, color = Gold)
+                Text("${a.locations.count { it.discovered || it.id == a.locationId }} charted locations · ${a.locations.count { !it.discovered && it.id != a.locationId }} uncharted", style = MaterialTheme.typography.bodyLarge)
+                Text("Travel follows one recorded road at a time, on foot. Each road has its own saved duration. Survey nearby paths to chart connecting destinations without moving there.")
+                OutlinedButton(onClick = { model.command(GameAction(ActionKind.INVESTIGATE), "Survey nearby paths") },
+                    enabled = ready && a.combat == null, modifier = Modifier.testTag("survey_paths")) { Text("Survey nearby paths · 1 hour") }
+                if (a.regionSeed == null) {
+                    Text("This older or custom campaign has no generated frontier. Adding it is optional and never replaces your existing map.", style = MaterialTheme.typography.bodySmall)
+                    OutlinedButton(onClick = { confirmExpansion = true }, enabled = ready && a.combat == null,
+                        modifier = Modifier.testTag("add_frontier")) { Text("Extend this world's frontier") }
+                } else Text("Frontier saved · exploration never regenerates it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            } }
+            items(a.locations.filter { it.discovered || it.id == a.locationId }.sortedBy { if (it.id == a.locationId) 0 else if (it.id in WorldGeography.neighbors(a, a.locationId)) 1 else 2 }, key = { it.id }) { location -> Panel {
+                val road = WorldGeography.route(a, a.locationId, location.id)
+                Text(location.name, style = MaterialTheme.typography.titleLarge, fontFamily = ScrollFont, color = Gold)
+                Text(location.description, fontSize = 17.sp, lineHeight = 26.sp)
+                val connections = WorldGeography.neighbors(a, location.id).map { id -> a.locations.first { it.id == id }.let {
+                    if (it.discovered || it.id == a.locationId) "${it.name} · ${WorldGeography.route(a, location.id, id)!!.hours}h" else "Uncharted path"
+                } }
+                Text("Recorded danger: ${location.danger}", style = MaterialTheme.typography.bodySmall)
+                Text("Footpaths: ${connections.joinToString().ifBlank { "No recorded connecting road" }}")
+                Text("Gathering: ${when (location.forage) { "ore" -> "iron ore"; "herbs_and_ore" -> "Dewleaf herbs and iron ore"; else -> "Dewleaf herbs" }} · ${3 - (a.searchCounts[location.id] ?: 0)} searches remaining", style = MaterialTheme.typography.bodySmall)
+                if (road != null) Text(road.description, fontSize = 17.sp, lineHeight = 26.sp)
+                Button(onClick = { model.command(GameAction(ActionKind.TRAVEL, location.id), "Travel to ${location.name}") },
+                    enabled = ready && a.combat == null && location.id != a.locationId && (s.rules.godMode || road != null),
+                    modifier = Modifier.testTag("travel_${location.id}")) {
+                    Text(when { location.id == a.locationId -> "Current location"; road != null -> "Travel on foot · ${road.hours}h"; s.rules.godMode -> "Sandbox travel · 2h"; else -> "Reach via connecting roads" })
                 }
             } }
         }

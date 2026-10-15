@@ -6,8 +6,16 @@ object AdventureValidator {
         fun text(value: String, max: Int = 2000) { require(value.isNotBlank() && value.length <= max && '\u0000' !in value) { "Invalid adventure text." } }
         fun ids(values: List<String>, max: Int) { require(values.size <= max && values.distinct().size == values.size) { "Duplicate or excessive adventure IDs." }; values.forEach { text(it, 100) } }
         ids(a.locations.map { it.id }, 128); require(a.locations.isNotEmpty())
-        a.locations.forEach { text(it.name, 500); text(it.description); require(it.danger in 0..10) }
+        a.locations.forEach { text(it.name, 500); text(it.description); require(it.danger in 0..10); require(it.forage in setOf("herbs", "ore", "herbs_and_ore")) }
         require(a.locations.any { it.id == a.locationId && it.name == s.world.currentLocation }) { "Adventure location does not match the world record." }
+        ids(a.routes.map { it.id }, 256)
+        val edges = mutableSetOf<Set<String>>()
+        a.routes.forEach { road ->
+            require(road.from != road.to && a.locations.any { it.id == road.from } && a.locations.any { it.id == road.to }) { "Road endpoints must be distinct existing locations." }
+            require(edges.add(setOf(road.from, road.to))) { "Duplicate road between locations." }
+            require(road.hours in 1..24) { "Road travel time must be 1–24 hours." }
+            text(road.description, 1000)
+        }
         require(a.hour in 0..23 && a.simulationHour in 0..100_000_000_000L && a.sequence in 0..1_000_000_000L)
         require(a.simulationMode in listOf("PAUSED", "NORMAL", "ACCELERATED") && a.injury in 0..80)
         ids(a.npcs.map { it.character.id }, 100)

@@ -164,7 +164,7 @@ class GameViewModel @JvmOverloads constructor(application: Application,
                 rules = GameRules(difficulty = options.difficulty),
             ))
         }
-        withContext(NonCancellable) { activate(repository.create(OpeningScene.attach(save))) }
+        withContext(NonCancellable) { activate(repository.create(OpeningScene.attach(WorldGeography.expand(save)))) }
         if (mutable.value.aiConfig.enabled) narrateRecord(mutable.value.active!!.save.adventure!!.history.single().id)
     }
     fun load(id: String) = task { ensureClean(); activate(repository.load(id)) }
@@ -317,6 +317,10 @@ class GameViewModel @JvmOverloads constructor(application: Application,
         val input = mutable.value.actionDraft.trim(); require(input.isNotEmpty()) { "Describe your approach first." }
         require(!IntentParser.needsReview(input)) { "No action taken: clarify the condition or prohibition before attempting an offline action." }
         resolve(GameAction(ActionKind.ATTEMPT, detail = input.take(1000)), input, narrate = false)
+    }
+    fun expandWorld() = task {
+        ensureClean()
+        resolve(GameAction(ActionKind.EXPAND_WORLD), "Extend the campaign frontier", narrate = false)
     }
     fun command(action: GameAction, label: String) = task { mutable.update { it.copy(pendingAction = null) }; resolve(action, label) }
     private suspend fun resolve(action: GameAction, input: String, narrate: Boolean = true) {

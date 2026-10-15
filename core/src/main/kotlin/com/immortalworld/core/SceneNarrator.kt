@@ -92,7 +92,7 @@ object SceneNarrator {
     fun scene(s: GameSave): List<String> {
         val a = s.adventure!!; val loc = a.locations.first { it.id == a.locationId }
         val visits = a.visits[a.locationId] ?: 1
-        val opening = if (visits <= 1 || loc.description != descriptions[loc.id]) loc.description else when ((visits.toLong() + s.world.day + a.hour / 6) % 3) {
+        val opening = if (visits <= 1 || (loc.description != descriptions[loc.id] && !(a.regionSeed != null && loc.id in (1..6).map { "frontier_$it" }))) loc.description else when ((visits.toLong() + s.world.day + a.hour / 6) % 3) {
             0L -> "The familiar approach to ${loc.name} opens into view again. Small movements and sounds draw attention among the established landmarks."
             1L -> "${loc.name} is familiar ground now. The same landmarks frame a different moment in the day, with the small sounds of the place coming forward before its wider details."
             else -> "Back at ${loc.name}, the setting is recognizable, but the passing hours have left their own impression on the light and the activity around it."
@@ -102,9 +102,10 @@ object SceneNarrator {
         val developments = if (a.locationId == "village" && a.factions.any { it.resources > 100 } && present.any { it.role == "elder" })
             " Fresh supply entries have been added to the visible section of the sect ledger." else ""
         val last = listOf(ambientActivity(s) + developments,
-            if ((a.searchCounts[a.locationId] ?: 0) >= 3) "The searched ground bears the marks of earlier gathering. Its accessible herbs and ore have already been collected." else "")
+            if ((a.searchCounts[a.locationId] ?: 0) >= 3) "The searched ground bears the marks of earlier gathering. Its accessible gathering resources have already been collected." else "")
             .filter { it.isNotEmpty() }.joinToString(" ")
-        return listOf(opening + " " + atmosphere(s), people, last).filter { it.isNotBlank() }
+        val paths = if (WorldGeography.unexploredNeighbors(a).isNotEmpty()) "Unsurveyed paths branch away from this location. Investigating the approaches can chart the next destinations without travelling there." else ""
+        return listOf(opening + " " + atmosphere(s), people, listOf(last, paths).filter { it.isNotBlank() }.joinToString(" ")).filter { it.isNotBlank() }
     }
     fun route(from: String, to: String): String? = when (setOf(from, to)) {
         setOf("village", "crossing") -> "The broad mountain road follows the cultivated foothills down toward the river; cart ruts and stretches of paving mark the approach to the ford."
@@ -124,10 +125,10 @@ object SceneNarrator {
         val primary = result.facts.filterNot { it.startsWith("Scheduled day ") }
         val description = when (request.kind) {
             ActionKind.TRAVEL -> {
-                val road = route(before.adventure!!.locationId, a.locationId)
-                val travel = if (road == null && a.locationId !in AdventureEngine.neighbors(before.adventure!!.locationId)) "The surroundings change to ${s.world.currentLocation}. This passage has no established connecting road; it was permitted by the enabled sandbox travel rules and takes two hours."
-                    else if (road == null) "The recorded road connects ${before.world.currentLocation} to ${s.world.currentLocation}. The journey takes two hours; the land along this custom route has no recorded description."
-                    else "$road The journey from ${before.world.currentLocation} to ${s.world.currentLocation} takes two hours."
+                val road = WorldGeography.route(before.adventure!!, before.adventure!!.locationId, a.locationId)
+                val duration = if ((road?.hours ?: 2) == 2) "two hours" else "${road!!.hours} hours"
+                val travel = if (road == null) "The surroundings change to ${s.world.currentLocation}. This passage has no established connecting road; it was permitted by the enabled sandbox travel rules and takes $duration."
+                    else "${road.description} The journey on foot from ${before.world.currentLocation} to ${s.world.currentLocation} takes $duration."
                 listOf(travel) + scene(s)
             }
             ActionKind.OBSERVE -> if (request.target.isBlank()) scene(s) else listOf(primary.joinToString(" "))

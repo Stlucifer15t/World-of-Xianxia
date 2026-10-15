@@ -47,7 +47,7 @@ class AiProviderTest {
     }
     @Test fun parsesOnlyTypedActionsWithoutMechanicalPatches() {
         assertEquals(GameAction(ActionKind.TRAVEL, "crossing"), CompatibleStoryteller.parseAction("""{"kind":"TRAVEL","target":"crossing"}"""))
-        listOf("""{"kind":"ATTACK","damage":999}""", """{"kind":"SIMULATION_MODE","target":"PAUSED"}""", """{"kind":"ACTIVITY","hours":999}""", """{"kind":"TRAVEL","target":4}""", """{"kind":"OBSERVE"} {}""").forEach {
+        listOf("""{"kind":"EXPAND_WORLD"}""", """{"kind":"ATTACK","damage":999}""", """{"kind":"SIMULATION_MODE","target":"PAUSED"}""", """{"kind":"ACTIVITY","hours":999}""", """{"kind":"TRAVEL","target":4}""", """{"kind":"OBSERVE"} {}""").forEach {
             assertThrows(Exception::class.java) { CompatibleStoryteller.parseAction(it) }
         }
     }

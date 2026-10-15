@@ -1,7 +1,8 @@
 package com.immortalworld.core
 
 /** Campaign-scoped records; no provider text is ever an executable state patch. */
-data class Location(val id: String, val name: String, val description: String, val danger: Int = 0, val discovered: Boolean = true)
+data class Location(val id: String, val name: String, val description: String, val danger: Int = 0, val discovered: Boolean = true,
+    val forage: String = if (id in listOf("mountain", "ruins")) "herbs_and_ore" else "herbs")
 data class Npc(val character: Character, val locationId: String, val role: String, val goal: String,
     val knowledge: List<String>, val relationship: Int = 0, val memories: List<String> = emptyList(), val negotiated: Boolean = false)
 data class Faction(val id: String, val name: String, val resources: Int = 100, val reputation: Int = 0, val member: Boolean = false)
@@ -20,6 +21,7 @@ data class AdventureState(
     val searchCounts: Map<String, Int> = emptyMap(), val defeated: List<String> = emptyList(),
     val injury: Int = 0, val sequence: Long = 0,
     val visits: Map<String, Int> = emptyMap(),
+    val routes: List<TravelRoute> = WorldGeography.legacyRoutes(locations), val regionSeed: Long? = null,
 )
 
 object AdventureFactory {
@@ -60,7 +62,7 @@ object AdventureFactory {
 
 enum class ActionKind { OBSERVE, SENSE, TRAVEL, INVESTIGATE, SEARCH, TALK, NEGOTIATE, BUY, SELL, JOIN, ACCEPT_QUEST, TURN_IN,
     CHALLENGE, ATTACK, TECHNIQUE, DEFEND, DODGE, MOVE, USE_ITEM, EQUIP, RETREAT, REST, ACTIVITY, BREAKTHROUGH, ATTEMPT,
-    SIMULATION_MODE, ENABLE_OFFLINE, DISABLE_OFFLINE, CLAIM_OFFLINE }
+    SIMULATION_MODE, ENABLE_OFFLINE, DISABLE_OFFLINE, CLAIM_OFFLINE, EXPAND_WORLD }
 
 data class ActivityEstimate(val hours: Int, val progress: Double, val health: Int, val energy: Int,
     val mastery: Int, val strength: Int, val herbs: Int, val materials: Int, val stones: Int, val explanation: String)

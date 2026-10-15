@@ -36,6 +36,52 @@ class SaveRepositoryTest {
         return GameSave(id = id, name = "My campaign", createdAt = 1, updatedAt = 1, randomState = g.randomState,
             player = g.character, world = WorldState("world", currentLocation = "Azure Cloud", startingCircumstances = "Beginning"))
     }
+    @Test fun frontierTravelResourcesAndIndependentCopiesSurviveDatabaseRestart() = runBlocking {
+        val engine = AdventureEngine { 1000L }
+        val fresh = campaign().let { it.copy(world = it.world.copy(currentLocation = "Azure Cloud Village")) }
+        val initial = repository.create(OpeningScene.attach(WorldGeography.expand(fresh)))
+        val survey = engine.execute(initial.save, GameAction(ActionKind.INVESTIGATE), "Survey nearby paths", "survey").state
+        val travelled = engine.execute(survey, GameAction(ActionKind.TRAVEL, "frontier_1"), "Travel", "travel").state
+        val gathered = engine.execute(travelled, GameAction(ActionKind.SEARCH), "Gather", "gather").state
+        val saved = repository.save(gathered, initial.revision)
+        val duplicate = repository.duplicate(saved.save.id)
+        val imported = repository.importJson(SaveCodec.encode(saved.save))
+        db.close(); open()
+        assertEquals(saved, repository.load(saved.save.id))
+        for (copy in listOf(duplicate, imported)) {
+            assertEquals(saved.save.adventure, repository.load(copy.save.id).save.adventure)
+            assertNotEquals(saved.save.id, copy.save.id)
+        }
+        val next = engine.execute(duplicate.save, GameAction(ActionKind.INVESTIGATE), "Survey deeper", "deeper").state
+        repository.save(next, duplicate.revision)
+        assertEquals(saved, repository.load(saved.save.id))
+        assertTrue(repository.backups(saved.save.id).isNotEmpty())
+    }
+    @Test fun v3MigrationAndExplicitExpansionKeepOriginalRawBackupAndOtherSlots() = runBlocking {
+        val s = OpeningScene.attach(campaign())
+        val created = repository.create(s)
+        val untouched = repository.create(campaign())
+        val raw = JSONObject(SaveCodec.encode(s)).put("version", 3)
+        raw.getJSONObject("adventure").apply {
+            remove("routes"); remove("regionSeed")
+            val locations = getJSONArray("locations")
+            for (i in 0 until locations.length()) locations.getJSONObject(i).remove("forage")
+        }
+        db.saves().putState(StateEntity(s.id, raw.toString()))
+        db.close(); open()
+        val migrated = repository.load(s.id)
+        assertEquals(s, migrated.save); assertNull(migrated.save.adventure!!.regionSeed)
+        val expanded = AdventureEngine().execute(migrated.save, GameAction(ActionKind.EXPAND_WORLD), "Extend frontier", "expand").state
+        val saved = repository.save(expanded, created.revision, "Before explicit frontier expansion")
+        val backup = db.saves().backup(repository.backups(s.id).first().id)!!
+        assertEquals(3, JSONObject(backup.json).getInt("version"))
+        assertEquals(raw.toString(), backup.json)
+        assertEquals(untouched, repository.load(untouched.save.id))
+        db.close(); open()
+        assertEquals(saved, repository.load(s.id))
+        assertEquals(s.player, saved.save.player); assertEquals(s.randomState, saved.save.randomState)
+        assertEquals(s.adventure!!.history.first(), saved.save.adventure!!.history.first())
+    }
     @Test fun survivesDatabaseCloseAndReopen() = runBlocking {
         val original = repository.create(campaign())
         db.close(); open()
@@ -141,7 +187,7 @@ class SaveRepositoryTest {
         val loaded = repository.load(original.save.id)
         assertEquals(original.save.player, loaded.save.player)
         val upgraded = repository.save(AdventureFactory.ensure(loaded.save), loaded.revision, "Before adventure initialization / v1 migration")
-        assertEquals(3, upgraded.save.version)
+        assertEquals(4, upgraded.save.version)
         assertNotNull(upgraded.save.adventure)
         val backup = db.saves().backup(repository.backups(original.save.id).first().id)!!
         assertEquals(1, JSONObject(backup.json).getInt("version"))
@@ -169,6 +215,9 @@ class SaveRepositoryTest {
         val created = repository.create(s)
         val old = JSONObject(SaveCodec.encode(s)).put("version", 2)
         old.getJSONObject("adventure").apply {
+            remove("routes"); remove("regionSeed")
+            val locations = getJSONArray("locations")
+            for (i in 0 until locations.length()) locations.getJSONObject(i).remove("forage")
             remove("visits")
             val receipt = getJSONArray("history").getJSONObject(0)
             listOf("kind", "locationId", "story", "dialogue", "sceneContext").forEach { receipt.remove(it) }
@@ -176,7 +225,7 @@ class SaveRepositoryTest {
         db.saves().putState(StateEntity(s.id, old.toString()))
         db.close(); open()
         val loaded = repository.load(s.id)
-        assertEquals(3, loaded.save.version); assertEquals(s.player, loaded.save.player); assertEquals(s.randomState, loaded.save.randomState)
+        assertEquals(4, loaded.save.version); assertEquals(s.player, loaded.save.player); assertEquals(s.randomState, loaded.save.randomState)
         val next = engine.execute(loaded.save, GameAction(ActionKind.OBSERVE), "Observe again", "new-look").state
         val written = repository.save(next, created.revision, "Before story migration")
         val backup = db.saves().backup(repository.backups(s.id).first().id)!!

@@ -218,18 +218,30 @@ class AdventureEngine(private val clock: () -> Long = System::currentTimeMillis)
             ActionKind.TRAVEL -> {
                 val dest = a.locations.firstOrNull { it.id == action.target } ?: throw IllegalArgumentException("Unknown destination. Inspect the map for valid locations.")
                 require(dest.id != a.locationId) { "You are already there." }
-                require(s.rules.godMode || (dest.discovered && dest.id in neighbors(a.locationId))) { "That destination is undiscovered or not adjacent. Follow the roads shown on the map." }
+                require(s.rules.godMode || (dest.discovered && WorldGeography.route(a, a.locationId, dest.id) != null)) { "That destination is undiscovered or not adjacent. Follow the roads shown on the map." }
                 val origin = s.world.currentLocation
-                a = a.copy(locationId = dest.id, visits = a.visits + (dest.id to ((a.visits[dest.id] ?: 0) + 1)))
-                s = s.copy(world = s.world.copy(currentLocation = dest.name)); elapsed = 2
-                fact("You travel from $origin to ${dest.name}, taking 2 in-game hours along the validated route${if (s.rules.godMode) " (sandbox travel permissions enabled)" else ""}.")
+                val road = WorldGeography.route(a, a.locationId, dest.id)
+                elapsed = road?.hours ?: 2 // Only explicit God Mode may travel without a road.
+                a = a.copy(locations = a.locations.map { if (it.id == dest.id) it.copy(discovered = true) else it }, locationId = dest.id, visits = a.visits + (dest.id to ((a.visits[dest.id] ?: 0) + 1)))
+                s = s.copy(world = s.world.copy(currentLocation = dest.name))
+                fact("You travel from $origin to ${dest.name}, taking $elapsed in-game hours on foot${if (road != null) " along the recorded route" else " without an established road"}${if (s.rules.godMode) " (sandbox travel permissions enabled)" else ""}.")
+            }
+            ActionKind.EXPAND_WORLD -> {
+                a = WorldGeography.expand(s.copy(adventure = a)).adventure!!
+                fact("The campaign now contains six persistent frontier locations. Their paths remain uncharted; investigate nearby routes to discover them. No journey, reward or cultivation advancement has occurred.")
             }
             ActionKind.INVESTIGATE -> {
                 elapsed = 1
+                val discovered = WorldGeography.unexploredNeighbors(a)
+                if (discovered.isNotEmpty()) {
+                    a = a.copy(locations = a.locations.map { if (it in discovered) it.copy(discovered = true) else it })
+                    discovered.take(12).forEach { location -> fact("A connecting trail to ${location.name} is now charted: ${WorldGeography.route(a, a.locationId, location.id)!!.hours} hours on foot. You have not travelled there.") }
+                }
+                if (discovered.size > 12) fact("More connecting destinations were charted; inspect the map for the complete list.")
                 if (a.locationId == "ruins") {
                     a = a.copy(quests = a.quests.map { if (it.id == "survey" && it.status == "ACTIVE") it.copy(status = "READY") else it })
                     fact("The outer wards bear water-worn formation marks. You can report this survey without entering the wolf's courtyard.")
-                } else { if (a.locationId in listOf("crossing", "mountain")) revealRuins(); fact("You examine the ground and routes. ${if (a.locationId in listOf("crossing", "mountain")) "The trail to Moonfall Ruins is now marked on your map." else "A noticeboard lists local quests; Mei trades herbs and pills."}") }
+                } else { if (a.locationId in listOf("crossing", "mountain")) revealRuins(); fact("You examine the ground and routes. ${if (a.locationId in listOf("crossing", "mountain")) "The trail to Moonfall Ruins is now marked on your map." else if (a.locationId == "village") "A noticeboard lists local quests; Mei trades herbs and pills." else "The local landmarks and connecting paths are recorded; no hidden reward is granted."}") }
             }
             ActionKind.SEARCH -> {
                 require((a.searchCounts[a.locationId] ?: 0) < 3) { "You have exhausted this location's three search opportunities. No resources were spent." }
@@ -240,9 +252,12 @@ class AdventureEngine(private val clock: () -> Long = System::currentTimeMillis)
                     fact("The spirit wolf blocks the courtyard. An encounter begins; you choose the first turn.")
                 } else {
                     a = a.copy(searchCounts = a.searchCounts + (a.locationId to ((a.searchCounts[a.locationId] ?: 0) + 1)))
-                    grant(Item("new", "Dewleaf herb", "A medicinal ingredient.", "herb", quantity = 2, maxStack = 99))
-                    if (a.locationId in listOf("mountain", "ruins")) { grant(Item("new", "Iron ore", "Used to craft armor.", "material", quantity = 2, maxStack = 99)); revealRuins() }
-                    fact("Found 2 Dewleaf herbs${if (a.locationId in listOf("mountain", "ruins")) " and 2 iron ore; the ruins route is marked" else ""}. Searches remaining here: ${3 - (a.searchCounts[a.locationId] ?: 0)}.")
+                    val forage = a.locations.first { it.id == a.locationId }.forage
+                    val found = mutableListOf<String>()
+                    if (forage != "ore") { grant(Item("new", "Dewleaf herb", "A medicinal ingredient.", "herb", quantity = 2, maxStack = 99)); found += "2 Dewleaf herbs" }
+                    if (forage != "herbs") { grant(Item("new", "Iron ore", "Used to craft armor.", "material", quantity = 2, maxStack = 99)); found += "2 iron ore" }
+                    if (a.locationId in listOf("mountain", "ruins")) { revealRuins(); fact("The Moonfall Ruins route is marked on your map.") }
+                    fact("Found ${found.joinToString(" and ")}. Searches remaining here: ${3 - (a.searchCounts[a.locationId] ?: 0)}.")
                 }
             }
             ActionKind.TALK -> {
@@ -408,9 +423,6 @@ class AdventureEngine(private val clock: () -> Long = System::currentTimeMillis)
             val ascension = p.cultivation.substage == s.realms.first { it.id == p.cultivation.realmId }.stages
             return ((65 + p.attributes.talent / 4 + p.attributes.comprehension / 8 - if (ascension && !s.rules.skipTribulations) 15 else 0) / s.rules.breakthroughDifficulty).toInt().coerceIn(5, 95)
         }
-        fun neighbors(id: String): List<String> = when (id) {
-            "village" -> listOf("crossing", "origin"); "crossing" -> listOf("village", "mountain")
-            "mountain" -> listOf("crossing", "ruins"); "ruins" -> listOf("mountain"); else -> listOf("village")
-        }
+
     }
 }

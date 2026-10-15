@@ -215,6 +215,19 @@ class OpeningFlowTest {
         regenerate(); idle()
         assertEquals(2, requests.size); assertEquals(mechanics(before), mechanics(active()))
     }
+    @Test fun expansionNeverCallsTheNarratorEvenWhenAiIsEnabled() {
+        val g = CharacterGenerator.generate(CreationOptions(), 42, "legacy-player")
+        val old = GameSave(id = UUID.randomUUID().toString(), name = "Expansion without paid request", createdAt = 1, updatedAt = 1,
+            randomState = g.randomState, player = g.character,
+            world = WorldState("legacy-world", currentLocation = "Azure Cloud Village", startingCircumstances = "Keep my story"))
+        slots.add(old.id); runBlocking { app.saves.create(old) }
+        ui { model.load(old.id) }; idle()
+        ui { model.expandWorld() }; idle()
+        assertTrue(requests.isEmpty())
+        assertNotNull(active().adventure!!.regionSeed)
+        assertEquals(old.player, active().player); assertEquals(old.randomState, active().randomState)
+        assertTrue(active().adventure!!.history.last().narration.isEmpty())
+    }
     @Test fun latestActionRegenerationNeverReplaysItsTimeOrMechanics() {
         ui { model.create("Action regeneration") }; idle()
         ui { model.command(GameAction(ActionKind.REST), "Rest") }; idle()

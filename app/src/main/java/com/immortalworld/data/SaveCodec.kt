@@ -38,8 +38,8 @@ object SaveCodec {
             require(tokener.nextClean() == '\u0000') { "Unexpected content after save." }
             require(root.string("format") == "xianxia-save") { "This is not an Immortal World save." }
             val version = root.int("version")
-            require(version in 1..3) { "Unsupported save version $version. No data was changed." }
-            // v1/v2 -> v3 preserves characters, mechanics, RNG, journals and past receipts. Initialization is a backed-up
+            require(version in 1..4) { "Unsupported save version $version. No data was changed." }
+            // v1/v2/v3 -> v4 preserves characters, mechanics, RNG, journals and past receipts. Initialization is a backed-up
             // repository update on activation, not a destructive Room migration.
             require(version != 1 || !root.has("adventure")) { "Version 1 cannot contain adventure data." }
             val w = root.getJSONObject("world")
@@ -47,7 +47,7 @@ object SaveCodec {
             w.only("id", "name", "day", "currentLocation", "startingCircumstances", "journal")
             r.only("difficulty", "cultivationSpeed", "breakthroughDifficulty", "lifespanEnabled", "skipTribulations", "passiveCultivation", "godMode")
             return SaveValidator.validate(GameSave(
-                format = root.string("format"), version = 3, id = root.string("id"), name = root.string("name"),
+                format = root.string("format"), version = 4, id = root.string("id"), name = root.string("name"),
                 createdAt = root.long("createdAt"), updatedAt = root.long("updatedAt"), randomState = root.long("randomState"),
                 adventure = if (version == 1 || root.get("adventure") == JSONObject.NULL) null else decodeAdventure(root.getJSONObject("adventure"), version),
                 player = decodePlayer(root.getJSONObject("player")),
@@ -113,8 +113,10 @@ object SaveCodec {
     private fun encodeAdventure(a: AdventureState): JSONObject = obj(
         "locationId" to a.locationId, "hour" to a.hour, "simulationHour" to a.simulationHour, "simulationMode" to a.simulationMode,
         "injury" to a.injury, "sequence" to a.sequence,
+        "regionSeed" to a.regionSeed,
+        "routes" to array(a.routes.map { obj("id" to it.id, "from" to it.from, "to" to it.to, "hours" to it.hours, "description" to it.description) }),
         "visits" to JSONObject().apply { a.visits.forEach { (key, value) -> put(key, value) } },
-        "locations" to array(a.locations.map { obj("id" to it.id, "name" to it.name, "description" to it.description, "danger" to it.danger, "discovered" to it.discovered) }),
+        "locations" to array(a.locations.map { obj("id" to it.id, "name" to it.name, "description" to it.description, "danger" to it.danger, "discovered" to it.discovered, "forage" to it.forage) }),
         "npcs" to array(a.npcs.map { obj("character" to encodePlayer(it.character), "locationId" to it.locationId, "role" to it.role, "goal" to it.goal,
             "knowledge" to array(it.knowledge), "relationship" to it.relationship, "memories" to array(it.memories), "negotiated" to it.negotiated) }),
         "factions" to array(a.factions.map { obj("id" to it.id, "name" to it.name, "resources" to it.resources, "reputation" to it.reputation, "member" to it.member) }),
@@ -127,15 +129,25 @@ object SaveCodec {
         "searchCounts" to JSONObject().apply { a.searchCounts.forEach { (key, value) -> put(key, value) } }, "defeated" to array(a.defeated),
     )
     private fun decodeAdventure(a: JSONObject, version: Int): AdventureState {
-        a.only("locationId", "hour", "simulationHour", "simulationMode", "injury", "sequence", "locations", "npcs", "factions", "quests", "events", "history", "combat", "idlePlan", "searchCounts", "defeated", *(if (version >= 3) arrayOf("visits") else emptyArray()))
+        a.only("locationId", "hour", "simulationHour", "simulationMode", "injury", "sequence", "locations", "npcs", "factions", "quests", "events", "history", "combat", "idlePlan", "searchCounts", "defeated", *(if (version >= 3) arrayOf("visits") else emptyArray()), *(if (version >= 4) arrayOf("routes", "regionSeed") else emptyArray()))
         val visits = if (version >= 3) a.getJSONObject("visits") else JSONObject().put(a.string("locationId"), 1)
         require(visits.length() <= 128) { "Too many visit records." }
         val counts = a.getJSONObject("searchCounts")
         require(counts.length() <= 128) { "Too many search records." }
+        val locations = a.objects("locations", 128).map {
+            it.only("id", "name", "description", "danger", "discovered", *(if (version >= 4) arrayOf("forage") else emptyArray()))
+            val loc = Location(it.string("id"), it.string("name"), it.string("description"), it.int("danger"), it.bool("discovered"))
+            if (version < 3) SceneNarrator.upgradeLocation(loc) else if (version >= 4) loc.copy(forage = it.string("forage")) else loc
+        }
         return AdventureState(locationId = a.string("locationId"), hour = a.int("hour"), simulationHour = a.long("simulationHour"), simulationMode = a.string("simulationMode"),
             injury = a.int("injury"), sequence = a.long("sequence"),
             visits = visits.keys().asSequence().associateWith { visits.int(it) },
-            locations = a.objects("locations", 128).map { it.only("id", "name", "description", "danger", "discovered"); Location(it.string("id"), it.string("name"), it.string("description"), it.int("danger"), it.bool("discovered")).let { location -> if (version < 3) SceneNarrator.upgradeLocation(location) else location } },
+            locations = locations,
+            routes = if (version < 4) WorldGeography.legacyRoutes(locations) else a.objects("routes", 256).map {
+                it.only("id", "from", "to", "hours", "description")
+                TravelRoute(it.string("id"), it.string("from"), it.string("to"), it.int("hours"), it.string("description"))
+            },
+            regionSeed = if (version < 4 || a.get("regionSeed") == JSONObject.NULL) null else a.long("regionSeed"),
             npcs = a.objects("npcs", 100).map { it.only("character", "locationId", "role", "goal", "knowledge", "relationship", "memories", "negotiated");
                 Npc(decodePlayer(it.getJSONObject("character")), it.string("locationId"), it.string("role"), it.string("goal"), it.strings("knowledge"), it.int("relationship"), it.strings("memories"), it.bool("negotiated")) },
             factions = a.objects("factions", 100).map { it.only("id", "name", "resources", "reputation", "member"); Faction(it.string("id"), it.string("name"), it.int("resources"), it.int("reputation"), it.bool("member")) },

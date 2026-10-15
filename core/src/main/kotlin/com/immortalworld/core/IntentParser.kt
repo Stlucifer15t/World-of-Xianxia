@@ -86,7 +86,7 @@ object ContextBuilder {
             availableTargets = if (record != null) emptyList() else a.locations.filter { it.discovered }.map { "location ${it.id}: ${it.name}" } +
                 local.map { "npc ${it.character.id}: ${it.character.name}" } + listOfNotNull(a.combat?.let { "opponent ${it.enemy.id}: ${it.enemy.name}, health ${it.enemy.health}; position=${it.position}" }) +
                 s.player.techniques.take(10).map { "technique ${it.id}: ${it.name}" } + s.player.inventory.take(12).map { "item ${it.id}: ${it.name} x${it.quantity}" } +
-                a.quests.map { "quest ${it.id}: ${it.name} (${it.status})" } + listOf("faction azure: Azure Cloud Sect") + (if (a.locationId == "village") listOf("noticeboard: the public sect recruitment notice") else emptyList()),
+                a.quests.map { "quest ${it.id}: ${it.name} (${it.status})" } + a.routes.mapNotNull { road -> road.other(a.locationId)?.let { id -> a.locations.firstOrNull { it.id == id && it.discovered }?.let { "adjacent foot route to ${it.id}: ${road.hours} hours" } } } + listOf("faction azure: Azure Cloud Sect") + (if (a.locationId == "village") listOf("noticeboard: the public sect recruitment notice") else emptyList()),
             playerSummary = if (record != null) "Recorded action at day ${record.day}, hour ${record.hour}. Mechanics are only those in the authoritative facts; do not infer historical stats from the current campaign."
                 else "${s.player.race}; realm=${s.player.cultivation.realmId} stage=${s.player.cultivation.substage}; HP=${s.player.health}/${s.player.maxHealth}; energy=${s.player.energy}; day=${s.world.day}, hour=${a.hour}; encounter=${a.combat?.enemy?.name ?: "none"}.",
             pace = pace, spokenDialogue = record?.dialogue.orEmpty(),
