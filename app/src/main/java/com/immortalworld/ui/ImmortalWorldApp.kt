@@ -74,7 +74,15 @@ fun ImmortalWorldApp(model: GameViewModel) {
         Scaffold(
             topBar = {
                 if (state.screen != Screen.JOURNEY) CenterAlignedTopAppBar(
-                    title = { Text("IMMORTAL WORLD", fontSize = 15.sp, letterSpacing = 2.sp, color = Gold) },
+                    title = { Text(when (state.screen) {
+                        Screen.HOME -> "Immortal World"
+                        Screen.CREATE -> "New life"
+                        Screen.CULTIVATION -> "Inner world"
+                        Screen.STATUS -> "Cultivator"
+                        Screen.SETTINGS -> if (settingsPage == "ai") "Provider & model" else "Settings"
+                        else -> state.screen.name.lowercase().replaceFirstChar { it.uppercase() }
+                    }, fontFamily = ScrollFont, fontSize = 17.sp, maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = Gold) },
                     navigationIcon = { if (state.screen != Screen.HOME) TextButton(onClick = {
                         goBack()
                     }, enabled = !state.busy) { Text("Back") } },
@@ -413,7 +421,6 @@ private fun Settings(state: GameUiState, model: GameViewModel, page: String?, op
             item { TextButton(onClick = { open(null) }, modifier = Modifier.testTag("settings_home")) { Text("‹ All settings") } }
             when (page) {
                 "ai" -> {
-                    item { Heading("THE STORYTELLER", "Provider & model", "An optional voice for your journey.") }
                     item { AiSettingsPanel(state, model) }
                 }
                 "saves" -> {
@@ -467,9 +474,14 @@ internal fun Panel(content: @Composable ColumnScope.() -> Unit) {
 }
 @Composable
 internal fun Detail(label: String, value: String) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(label, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-        Text(value, Modifier.weight(1.2f), fontWeight = FontWeight.Medium, style = MaterialTheme.typography.bodyMedium)
+    if (value.length > 12) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+            Text(value, fontWeight = FontWeight.Medium, style = MaterialTheme.typography.bodyMedium)
+        }
+    } else Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(label, Modifier.weight(1.5f), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+        Text(value, Modifier.weight(1f), fontWeight = FontWeight.Medium, style = MaterialTheme.typography.bodyMedium)
     }
 }
 @Composable

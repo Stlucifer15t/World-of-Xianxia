@@ -102,7 +102,7 @@ internal fun RealmTablet(save: GameSave) {
                 Text(c.method, style = MaterialTheme.typography.bodySmall)
             }
         }
-        Detail("Breakthrough progress", "${"%.1f".format(c.progress)}%")
+        Detail("Breakthrough", "${"%.1f".format(c.progress)}%")
         LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Breakthrough progress" }, color = Gold)
         Detail("Qi reserves", "${p.energy} / ${p.maxEnergy}")
         LinearProgressIndicator(progress = { if (p.maxEnergy > 0) p.energy.toFloat() / p.maxEnergy else 0f }, modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Qi reserves" })

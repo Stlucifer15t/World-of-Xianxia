@@ -4,6 +4,7 @@ package com.immortalworld.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
@@ -76,14 +77,22 @@ internal fun AiSettingsPanel(state: GameUiState, model: GameViewModel) {
         showKey = false
     }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("Setup", "Saved", "Limits", "Knowledge").forEach { name ->
                 FilterChip(selected = tab == name, onClick = { tab = name }, label = { Text(name) }, modifier = Modifier.testTag("ai_tab_$name"))
             }
         }
         when (tab) {
             "Setup" -> {
-                SectionCard(provider, if (provider == "Google Gemini") "Use your Gemini API key" else "Choose the service that tells your story", "◇", "choose_provider") { providerPicker = true }
+                OutlinedCard(onClick = { providerPicker = true }, modifier = Modifier.fillMaxWidth().testTag("choose_provider")) {
+                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Provider", style = MaterialTheme.typography.labelSmall, color = Gold)
+                            Text(provider, style = MaterialTheme.typography.titleMedium)
+                        }
+                        Text("Change", color = Jade, style = MaterialTheme.typography.labelLarge)
+                    }
+                }
                 Panel {
                     if (custom) OutlinedTextField(draft.endpoint, { if (it.length <= 500) endpoint(it.trim()) },
                         label = { Text("Chat API URL") }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("ai_endpoint"))
@@ -93,7 +102,7 @@ internal fun AiSettingsPanel(state: GameUiState, model: GameViewModel) {
                         modifier = Modifier.fillMaxWidth().testTag("ai_key"))
                     OutlinedTextField(draft.model, { if (it.length <= 200) draft = draft.copy(model = it.trim(), manualContext = if (it.trim() != draft.model) false else draft.manualContext) },
                         label = { Text("Model ID") }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("ai_model"))
-                    Text("Type a model ID, or load the list from your provider.", style = MaterialTheme.typography.bodySmall)
+                    Text("Enter an ID, or load models.", style = MaterialTheme.typography.bodySmall)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { model.detectModels(config) }, enabled = !state.catalogLoading && !state.busy) { Text(if (state.catalogLoading) "Loading…" else "Load models") }
                         OutlinedButton(onClick = { filter = ""; browse = true }, enabled = !catalog?.models.isNullOrEmpty()) { Text("Browse ${catalog?.models?.size ?: 0}") }
