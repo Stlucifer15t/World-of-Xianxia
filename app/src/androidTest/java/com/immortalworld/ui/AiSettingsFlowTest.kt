@@ -25,6 +25,11 @@ class AiSettingsFlowTest {
     private fun waitFor(condition: () -> Boolean) { compose.waitUntil(15_000, condition) }
     private fun idle() { waitFor { !model.state.value.busy } }
     private fun edit(tag: String, text: String) { compose.onNodeWithTag(tag).performScrollTo().performTextReplacement(text) }
+    private fun tab(name: String) {
+        // Reveal the vertical page first, then the independently scrollable tab row.
+        compose.onNodeWithTag("settings").performScrollToIndex(1)
+        compose.onNodeWithTag("ai_tab_$name").performScrollTo().performClick()
+    }
     private fun click(text: String) { compose.onNodeWithText(text, substring = false).performScrollTo().performClick() }
     @Before fun setup() {
         compose.runOnUiThread {
@@ -56,7 +61,7 @@ class AiSettingsFlowTest {
         edit("ai_endpoint", "https://example.invalid/v1/chat/completions")
         edit("ai_model", "manual-cultivator")
         edit("ai_key", "instrumentation-only-key")
-        compose.onNodeWithTag("ai_tab_Limits").performScrollTo().performClick()
+        tab("Limits")
         edit("ai_context", "1,000,000")
         edit("ai_output", "900")
         click("Save without testing"); idle()
@@ -79,15 +84,15 @@ class AiSettingsFlowTest {
             assertEquals(model.state.value.aiConfig, restored.state.value.aiConfig)
         } finally { compose.runOnUiThread { restoredStore.clear() } }
 
-        compose.onNodeWithTag("ai_tab_Saved").performScrollTo().performClick()
+        tab("Saved")
         edit("profile_name", "$prefix copy")
         click("Save as new profile"); idle()
         val secondId = model.state.value.activeProfileId
         assertNotEquals(firstId, secondId)
         compose.onNodeWithTag("profile_$firstId").performScrollTo().performClick(); idle()
-        compose.onNodeWithTag("ai_tab_Setup").performScrollTo().performClick()
+        tab("Setup")
         edit("ai_key", "unsaved-key")
-        compose.onNodeWithTag("ai_tab_Saved").performScrollTo().performClick()
+        tab("Saved")
         compose.onNodeWithTag("profile_$secondId").performScrollTo().performClick()
         compose.onNodeWithText("Switch provider profile?").assertIsDisplayed()
         compose.onNodeWithTag("confirm_profile_switch").performClick(); idle()
@@ -120,7 +125,7 @@ class AiSettingsFlowTest {
         assertNotNull(model.state.value.error)
         assertEquals(original, runBlocking { app.aiPreferences.load() })
         compose.onNodeWithText("OK").performClick()
-        compose.onNodeWithTag("ai_tab_Knowledge").performScrollTo().performClick()
+        tab("Knowledge")
         click("Add Fandom example")
         compose.onNodeWithTag("knowledge_sources").assertTextContains("https://martial-world.fandom.com/wiki/Cultivation")
     }
