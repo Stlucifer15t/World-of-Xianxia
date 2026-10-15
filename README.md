@@ -4,11 +4,11 @@ Native Kotlin/Jetpack Compose xianxia RPG with a **story-first, player-controlle
 adventure**, an authoritative offline game engine, optional AI narration, and
 portable saves. This extends the tested Phase 1 app rather than replacing it.
 
-**Verified build:** 0.5.0 Jade Records, code commit `35c9501`.
+**Verified build:** 0.5.1 custom API fix, code commit `6b17b05`.
 
-[Download the tested APK (ZIP)](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38666930895/artifacts/11943050164) · [Successful build and tests](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38666930895)
+[Download the tested APK (ZIP)](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38669338351/artifacts/11942359378) · [Successful build and tests](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38669338351)
 
-136 unit tests and 27 device tests on **each** of API 26/API 35 passed. Lint has
+143 unit tests and 28 device tests on **each** of API 26/API 35 passed. Lint has
 zero errors and 14 non-error findings. Extract `app-debug.apk` from the ZIP.
 GitHub may require sign-in. **Read the save-export warning below before installing.**
 
@@ -20,6 +20,14 @@ that deletes private saves. Export first, install the new APK, then import the
 `.xianxia.json`. Version-1 and version-2 saves migrate to v3 without rerolling the player,
 resetting the adventure, or deleting the journal. Keep the original export if
 you may need to return to an older app; older apps do not read v3 exports. Do not uninstall without an external save copy.
+
+## Custom API fix (0.5.1)
+
+Custom providers now accept either an API base URL such as `https://example.com/v1`
+or the full `/chat/completions` URL. **Load models** uses `/v1/models` even before
+a model is selected; connection tests, streaming and action interpretation use
+`/v1/chat/completions`. Nested prefixes and saved configurations are preserved.
+Gemini's existing model catalog and chat behavior remain supported.
 
 ## Cultivation identity & simpler settings (0.5)
 

@@ -1,0 +1,98 @@
+{
+  "verified_on": "2026-10-15",
+  "application_version": "0.5.1-custom-api",
+  "repository": "Stlucifer15t/World-of-Xianxia",
+  "branch": "arena/b0b240be-world-of-xianxia",
+  "code_commit": "6b17b05b45e26cce6b8917c27c17c6acf00c3337",
+  "run_id": 38669338351,
+  "run_url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38669338351",
+  "conclusion": "success",
+  "unit_tests": {
+    "core": 34,
+    "adventure": 30,
+    "story": 15,
+    "save_codec": 27,
+    "ai_adapter_mock_server": 10,
+    "total": 143,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "ai_upgrade_mock_server_and_fixtures": 20,
+    "custom_api_endpoint_regressions": 7
+  },
+  "emulator_tests": [
+    {
+      "api": 26,
+      "persistence": 17,
+      "compose": 5,
+      "total": 28,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "encrypted_ai_preferences": 6
+    },
+    {
+      "api": 35,
+      "persistence": 17,
+      "compose": 5,
+      "total": 28,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "encrypted_ai_preferences": 6
+    }
+  ],
+  "lint": {
+    "errors": 0,
+    "other_findings": 14
+  },
+  "save_format": {
+    "exports": 3,
+    "imports": [
+      1,
+      2,
+      3
+    ],
+    "room_database_schema": 1,
+    "room_schema_file_sha256": "8a2fa3d84ff99a951ce4ddffebe55999562ab93dcf2312a6db3483999da45d2c"
+  },
+  "apk_artifact": {
+    "id": 11942359378,
+    "name": "immortal-world-debug-apk",
+    "url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38669338351/artifacts/11942359378",
+    "size_in_bytes": 12524972,
+    "archive_sha256": "623b0d2df592cca80078ecc5935148c9b8cbaff8a8971f29119aa8bea6a9009f",
+    "digest_source": "GitHub artifact API; archive digest, not an independently measured APK digest"
+  },
+  "verified_additions": [
+    "Retained core, save, UI, encrypted profile and provider regression suites",
+    "Shared base/full URL resolution preserving origin, port and nested prefix",
+    "Model discovery with blank model field and exact GET path/authentication",
+    "Connection test, streaming narration and action proposals use resolved chat endpoint without replay",
+    "Unsafe URL and redirect safety retained; Gemini native metadata routing/header preserved",
+    "Encrypted base URL restoration and Compose million-token settings/profile flow using a base URL"
+  ],
+  "remaining_manual_acceptance": [
+    "Physical-phone install, SAF providers, force-stop, rotation, TalkBack, IME and larger accessibility fonts",
+    "Live compatible AI provider with user-supplied credentials, network recovery and measured response latency",
+    "Live accessible Fandom/MediaWiki/custom-source/SearXNG behavior",
+    "Physical-device Android Keystore and profile review",
+    "Live CrowLLM account access and its actual model catalog with user-owned credentials"
+  ],
+  "not_implemented": [
+    "Full graphical God Mode/world editor",
+    "Large procedural worlds and autonomous NPC plots",
+    "Advanced sect management, group combat and arbitrary generated mechanics",
+    "Production signing",
+    "Native non-chat-completions generation protocols",
+    "Exact per-model tokenizer accounting",
+    "Whole-site crawling or protected-site bypass (intentionally excluded)",
+    "On-device GGUF inference or native Cloudflare account configuration",
+    "Selectable higher-realm creation or independent decorative root-quality mechanics"
+  ],
+  "preview_artifact": {
+    "id": 11942289708,
+    "url": "https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38669338351/artifacts/11942289708",
+    "name": "device-test-reports-api-35"
+  }
+}

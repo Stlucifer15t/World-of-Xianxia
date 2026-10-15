@@ -9,8 +9,9 @@ See `TESTING.md` for the exact verified build and outstanding device acceptance.
 
 Open **Menu → Settings / AI → Provider & model**. The **Setup** tab asks for a
 provider, API key and model ID. Choose Google Gemini, OpenAI, OpenRouter or Groq;
-URLs are filled in for you. Choose **Other compatible API** to enter a complete
-HTTPS **chat/completions** URL. **Show/Hide** controls key visibility locally. Changing the endpoint's origin
+URLs are filled in for you. Choose **Other compatible API** to enter an HTTPS
+**API base URL** (for example `https://example.com/v1`) or a full
+**chat/completions** URL. Both forms are accepted as of 0.5.1. **Show/Hide** controls key visibility locally. Changing the endpoint's origin
 clears the draft key to avoid sending one provider's credential to another host.
 Presets are conveniences for compatible APIs, not native integrations with every
 API offered by those companies. Native Anthropic Messages, OpenAI Responses,
@@ -67,9 +68,29 @@ provider protocol or the roadmap's world-generation/God Mode features.
 
 ## Models and independent token settings
 
-For conventional compatible endpoints ending in `/chat/completions`, discovery
-uses `/models` under the same API base and origin, with the same request-specific
-credential. Redirects are disabled. The catalog is bounded; IDs can be filtered
+Model discovery and all chat requests share one URL resolver. For example:
+
+| Entered URL | Load models (GET) | Test / generation (POST) |
+|---|---|---|
+| `https://example.com/v1` | `/v1/models` | `/v1/chat/completions` |
+| `https://example.com/v1/` | `/v1/models` | `/v1/chat/completions` |
+| `https://example.com/v1/chat/completions` | `/v1/models` | `/v1/chat/completions` |
+| `https://example.com/gateway/v2` | `/gateway/v2/models` | `/gateway/v2/chat/completions` |
+
+Include the provider's required prefix (such as `/v1`) yourself. The app does not
+guess versions, probe alternative hosts, or retry a paid POST at different paths.
+A URL without the `/chat/completions` suffix is treated as an API base. A trailing
+slash is accepted. Existing full chat URLs still work and saved URLs are not
+rewritten: they are resolved when used, including after startup restoration.
+
+**Load models** needs only the URL/key, not a model ID. Then browse or enter a model
+before testing generation. If a server denies access or does not offer a model
+list, manual model entry remains available; the app does not invent a list.
+Typing a new URL/key/model or starting a new lookup clears an earlier success notice
+so it is not mistaken for a test of the edited connection.
+
+Discovery uses the same API base and origin, with a request-specific credential.
+Redirects are disabled. The catalog is bounded; IDs can be filtered
 and selected or entered manually even when discovery fails.
 
 The Google Gemini preset uses `/v1beta/openai/chat/completions` for generation.

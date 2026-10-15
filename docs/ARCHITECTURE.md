@@ -1,5 +1,16 @@
 # Architecture and authority boundaries
 
+## Custom API URL correction (0.5.1)
+
+`AiEndpoints` is the shared, pure resolver used by validation, `ModelDiscovery`
+and every `CompatibleStoryteller` request. It accepts base URLs or full chat URLs,
+preserves origin/port/nested API prefixes, and derives sibling models/chat routes.
+Stored configuration stays unchanged. Gemini retains its bounded native catalog
+route/header; generation remains compatible chat. URL safety checks still reject
+credentials, query parameters, fragments and production plaintext HTTP. There is
+no endpoint probing or fallback paid request. This fixes the previous mismatch
+where discovery required a full chat path and generation POSTed to a bare base URL.
+
 ## Jade-records UI refinement (0.5)
 
 `CultivationDesign.kt` draws static formation ornaments and provides settings cards,

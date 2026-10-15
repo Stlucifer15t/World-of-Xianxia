@@ -1,6 +1,44 @@
 # Immortal World verification and device acceptance
 
-## Current Jade Records UI build — 2026-10-15
+## Current custom-API fix — 2026-10-15
+
+[Run 38669338351](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38669338351) passed for code commit
+`6b17b05b45e26cce6b8917c27c17c6acf00c3337` (version **0.5.1-custom-api**, version code 6).
+[Download the tested APK ZIP](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38669338351/artifacts/11942359378).
+
+| Check | Actual result |
+|---|---|
+| Build / debug APK | Passed, uploaded |
+| Unit tests | **143 passed; 0 failures/errors/skips** |
+| API 26 instrumentation | **28 passed; 0 failures/errors/skips** |
+| API 35 instrumentation | **28 passed; 0 failures/errors/skips** |
+| Lint | 0 errors; 14 non-error findings |
+| Campaign / Room schemas | v3 / v1, unchanged |
+
+The user's `/v1` base URL was previously rejected by model discovery, which required
+`/chat/completions`. Generation also POSTed directly to the configured base URL.
+One shared resolver now supplies the correct models and chat routes in both cases.
+
+Seven additional unit tests cover the screenshot URL, base/full/trailing-slash
+forms, nested/encoded prefixes and ports, GET-only discovery before model selection,
+exactly one POST for connection tests, streamed narration and action proposals,
+unsafe URL rejection, error/redirect behavior, and Gemini's native catalog/header.
+These use local mock servers or pure URL checks; no real account key is involved.
+The six encrypted-preference tests now include base-URL restoration. The five
+Compose flows and 17 campaign persistence tests remain; the AI settings flow now
+saves/restores a base URL with a million-token context and separate output limit.
+
+Saved URLs/credentials are not migrated or rewritten. The fix does not guess an
+API version, probe hosts, retry paid requests, or fabricate model lists. Unsupported
+catalogs still allow manual model entry. Existing full chat URLs and Gemini remain
+covered. No direct live CrowLLM/authenticated account verification is claimed.
+
+Machine-readable record: `verification-custom-api-2026-10-15.json`. The artifact's
+GitHub-reported ZIP SHA-256 is `623b0d2df592cca80078ecc5935148c9b8cbaff8a8971f29119aa8bea6a9009f`;
+this is not an independently measured APK hash. Export campaigns before uninstalling
+an older differently signed debug build; provider keys are device-only.
+
+## Previously verified Jade Records UI build — 2026-10-15
 
 [Run 38666930895](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38666930895) passed for code commit `35c9501afb208ec3a3aac8b9dd39886101f24abe`,
 version **0.5.0-jade-records**. [Download the tested debug APK ZIP](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38666930895/artifacts/11943050164).
