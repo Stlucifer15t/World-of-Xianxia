@@ -1,5 +1,25 @@
 # Delivery phases and acceptance gates
 
+## Connected AI and request-profile continuation (0.4)
+
+The requested AI improvements extend Phase 3 in the existing architecture:
+saved configuration restoration and optional startup/network-return metadata
+checks, pooled asynchronous transport, streamed narration previews, model catalogs,
+explicit detected/manual context budgets, separate output limits, and opt-in
+bounded cultivation web references. See `AI_SETTINGS.md` for supported protocols,
+privacy, setup and failure behavior, and `TESTING.md` for verified build evidence.
+
+After that increment, the next unfinished provider feature—**named request
+profiles**—was continued: up to eight independent configurations/credentials,
+saved selection, copy-as-new, rename, and confirmed switching/deletion. Existing
+single-provider settings migrate without touching campaign saves. This removes
+multiple profiles from the unfinished-feature list, not the rest of Phase 3's
+ongoing adversarial/live-provider acceptance or the larger game backlog.
+
+Remaining next work includes wider provider/manual-device acceptance and the
+unfinished Phase 4 generated-world/social systems, followed by the dedicated
+Phase 5 editor. Existing bounded world mechanics must be extended, not rebuilt.
+
 ## Story-first refinement (0.3)
 
 The existing adventure now has larger native prose/dialogue, a compact controls
@@ -23,7 +43,7 @@ quests, faction entry and scheduled simulation.
 
 This is not a claim that the full later phases are complete. In particular, full
 procedural generation, advanced factions/sects/combat, arbitrary content creation,
-multiple AI profiles and the graphical God Mode editor remain outstanding. See
+the graphical God Mode editor remain outstanding. Named AI profiles were added in 0.4. See
 `ACTIVE_ADVENTURE.md` for implemented behavior and `TESTING.md` for current evidence.
 
 ## Phase 1 — foundation (automated verification passed; manual acceptance open)

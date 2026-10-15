@@ -1,6 +1,61 @@
 # Immortal World verification and device acceptance
 
-## Current living-story build — 2026-10-15
+## Current connected-AI build — 2026-10-15
+
+[Run 38658988568](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38658988568) completed successfully for code commit
+`c8f7bf9f4b6dac25f19ae93b35eb6b185c70a51a` (version **0.4.0-connected-ai**).
+[Download the tested debug APK artifact](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38658988568/artifacts/11937149995). Extract `app-debug.apk`;
+export campaigns before uninstalling an older differently signed debug build.
+
+| Check | Actual result |
+|---|---|
+| Android compilation / debug APK | Passed, uploaded |
+| Retained core / adventure / story | 79 passed |
+| Save codec / migration | 27 passed |
+| Retained compatible-provider tests | 10 passed, mock server |
+| AI transport / streaming / metadata / references | 19 passed, mock server/fixtures |
+| Total unit tests | **135 passed; 0 failures/errors/skips** |
+| API 26 device tests | **25 passed; 0 failures/errors/skips** |
+| API 35 device tests | **25 passed; 0 failures/errors/skips** |
+| Android lint | 0 errors; 14 non-error findings |
+| Portable saves / Room schema | v3 / v1, unchanged |
+
+Each device suite retains 17 disk-backed campaign persistence tests and two story
+Compose flows, adds five encrypted-preference/profile tests, and a third Compose
+flow for AI settings. The settings flow enters a comma-formatted million-token
+context with a separate 900-token output ceiling, saves, checks restoration in a
+fresh ViewModel, copies/switches profiles without leaking an unsaved key, then
+renames and deletes a profile. Preference tests cover legacy migration, real
+Android Keystore encryption, independent credentials, unreadable-key preservation
+and repair, name/limit validation, invalid selection and profile-bound saves.
+
+The 19 new unit tests cover shared connections, incremental SSE, complete-stream
+requirements, output/agency limits, cancellation without request replay, JSON
+fallback, GET-only metadata, explicit/unknown context limits, bounded context,
+credential redaction, public-address checks, generic lookup queries, relevant
+extraction, caching, no provider keys sent to reference sources, focused search,
+protected-source failure and configured MediaWiki installation paths.
+
+Intermediate run `38657255500` passed the requested AI increment (135 units and
+23 device tests per API). Run `38658242668` passed its build but failed the new
+settings UI test on both APIs because the lazy list had not composed the AI form.
+The final test scrolls the parent list to the form before editing; **no assertions
+or API levels were removed**. The final run also includes profile-bound writes,
+header-safe credential validation and network-transition reconnect guards.
+
+Local core checks passed (79). Android compilation/lint, unit tests and both
+emulator suites ran on GitHub Actions because SDK/dependency hosts are restricted
+locally. Evidence is in `verification-connected-ai-2026-10-15.json`. The artifact's
+GitHub-reported ZIP SHA-256 is `6bdd463c6ea673923bb607111e23ac1d63247356a636905be9434ff6f0b93e93`;
+this is the archive digest, not a separately measured APK digest.
+
+**Not claimed:** live paid-provider or public-wiki compatibility, measured real-model
+latency, physical-device Keystore/SAF/rotation/TalkBack certification, universal
+SSE/context metadata support, or completion of procedural worlds/full God Mode.
+The manual checklist below remains open. CI action-runtime deprecation warnings
+are also recorded by GitHub; they did not fail this run.
+
+## Previously verified living-story build — 2026-10-15
 
 [Run 38650787173](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38650787173) completed successfully for code commit
 `eb0bd5dde2903e23e855f7e4641932e5886f985e`. [Download the tested APK artifact](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38650787173/artifacts/11934273712).
@@ -173,6 +228,30 @@ complete RPG. The remaining manual checks are below.
 - Compose: creation, journal, character/draft continuity, dialogue, notice, travel,
   menu/recent events and 320dp/130%-font keyboard/conditional-action checks.
 
+## Connected-AI manual acceptance (still open)
+
+- Use your own compatible provider/key. Save, force-stop/relaunch and verify the
+  selected profile restores. Startup auto-connect must make only the metadata
+  check; disabled profiles must remain quiet. Test offline launch, airplane-mode
+  recovery and provider rejection without blocking local actions or saves.
+- Test a catalog with explicit capacity and one without it. Confirm manual IDs,
+  context override of 1,000,000 and separate output limits; do not assume that a
+  larger configured budget means the provider actually supports it.
+- Observe time to first streamed text, cancellation, a dropped connection and
+  streaming-disabled fallback. Preview text must remain marked unverified; failed
+  narration must not repeat mechanical actions. No live latency measurement is
+  claimed by the mock-server suite.
+- Add two real profiles, switch with unsaved edits, relaunch, rename/delete, and
+  inspect credential isolation. Review Keystore behavior on a physical device;
+  keys must never appear in campaign exports or error messages.
+- Opt into a small accessible Fandom/MediaWiki/direct source and, optionally, your
+  SearXNG JSON endpoint. Inspect relevance/source links and protected-page failure.
+  No crawling or challenge bypass is expected. Mock fixtures do not certify that
+  a particular live website allows access today.
+- Check settings with a physical IME, landscape, larger font scales and TalkBack.
+  Export campaigns before any uninstall caused by a debug-signing-key change.
+  API keys are device-only and must be re-entered after uninstall.
+
 ## Additional story-first manual checks
 
 - Read the initial scene, travel/return, advance into night, deplete Mei's herbs and
@@ -188,7 +267,7 @@ complete RPG. The remaining manual checks are below.
 
 Before installing, export an old `.xianxia.json` on the phone. If the new debug APK
 has a different signing key, only uninstall after confirming that external backup.
-Import in 0.3 and verify character/journal/adventure values and independent slot identity.
+Import in 0.4 and verify character/journal/adventure values and independent slot identity.
 
 - Type and submit with the keyboard open in portrait, landscape and large-font mode.
   Inspect every destination and return to the same unfinished action draft.

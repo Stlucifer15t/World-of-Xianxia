@@ -25,6 +25,7 @@ the session until the key is re-entered. Other encrypted keys are preserved.
 When **Enable provider calls** and **Auto-connect saved provider** are on, startup
 performs a cancellable, asynchronous **GET /models**, not a paid completion. A
 validated network return can retry this metadata check with a 30-second cooldown.
+Signal/bandwidth updates alone do not repeatedly trigger checks.
 Disabled profiles make no automatic requests. A model-list success establishes API
 reachability, not permission to generate with every listed model. A denied or
 unsupported catalog leaves manual configuration and offline play available.
@@ -51,6 +52,8 @@ endpoints, encrypted keys, models, context/output settings and knowledge sources
 - The active profile ID persists across startup. Switching cancels obsolete model
   discovery, clears reference cache/results and prevents stale catalog responses
   from overwriting the new selection. A catalog is bound to endpoint and credential.
+- Saving is bound to the edited profile ID, even if another app window changes
+  the global selection. A deleted target cannot overwrite another profile.
 - Repairing one unreadable key does not erase other profiles' encrypted ciphertext.
 
 This completes the named request-profile increment, not native support for every

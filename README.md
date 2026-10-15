@@ -1,14 +1,14 @@
 # Immortal World
 
-Native Kotlin/Jetpack Compose xianxia RPG with an **story-first, player-controlled text
+Native Kotlin/Jetpack Compose xianxia RPG with a **story-first, player-controlled text
 adventure**, an authoritative offline game engine, optional AI narration, and
 portable saves. This extends the tested Phase 1 app rather than replacing it.
 
-**Verified build:** 0.3.0 living story, code commit `eb0bd5d`.
+**Verified build:** 0.4.0 connected AI, code commit `c8f7bf9`.
 
-[Download the tested APK (ZIP)](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38650787173/artifacts/11934273712) · [Successful build and tests](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38650787173)
+[Download the tested APK (ZIP)](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38658988568/artifacts/11937149995) · [Successful build and tests](https://github.com/Stlucifer15t/World-of-Xianxia/actions/runs/38658988568)
 
-116 unit tests and 19 device tests on **each** of API 26/API 35 passed. Lint has
+135 unit tests and 25 device tests on **each** of API 26/API 35 passed. Lint has
 zero errors and 14 non-error findings. Extract `app-debug.apk` from the ZIP.
 GitHub may require sign-in. **Read the save-export warning below before installing.**
 
@@ -21,7 +21,28 @@ that deletes private saves. Export first, install the new APK, then import the
 resetting the adventure, or deleting the journal. Keep the original export if
 you may need to return to an older app; older apps do not read v3 exports. Do not uninstall without an external save copy.
 
-## Current increment: living story (0.3)
+## Connected AI settings (0.4)
+
+- Restore the selected encrypted provider configuration on startup; optional
+  asynchronous model/access checks on startup and network restoration.
+- Shared connections, cancellable requests and streamed **unverified** narration
+  previews. Only completed, validated prose is saved; failures never replay actions.
+- Fetch compatible model lists when supported, with manual model entry always
+  available. Use explicit provider context metadata or an editable manual budget,
+  including **1,000,000 tokens**. **Maximum output tokens remain separate.**
+- Optional targeted cultivation references from accessible Fandom/MediaWiki pages,
+  custom HTTPS sources and a user-configured SearXNG search service. Bounded excerpts,
+  no crawling or whole-site downloads; external text cannot change game mechanics.
+- Roadmap continuation: up to **eight named provider profiles**, with independent
+  encrypted credentials/settings, saved selection, rename, confirmed deletion and
+  protection against accidentally discarding unsaved edits when switching.
+
+See [AI setup, profiles, context limits and knowledge-source guide](docs/AI_SETTINGS.md).
+Compatible APIs vary: metadata and SSE are not universally supported. Protected
+wiki pages may be inaccessible. No paid-provider latency or prose-quality guarantee
+is implied; offline gameplay remains independent of these optional services.
+
+## Retained living story (0.3)
 
 - **19sp narrative and 18sp dialogue**, comfortable line spacing, consolidated
   paragraphs and a larger padded action field. Native font scaling and keyboard
@@ -69,7 +90,7 @@ See [living-story behavior, boundaries and examples](docs/LIVING_STORY.md).
 This is a bounded first world (four connected locations, three NPCs, two quests,
 one sect and a guarded ruins encounter), **not** the complete master-spec game.
 Large-scale/procedural worlds, advanced sect management, group combat, arbitrary
-mechanical content generation, multiple provider profiles, the graphical God Mode
+mechanical content generation, the graphical God Mode
 editor and production release signing remain future work. The existing explicit
 God Mode save flag remains compatible with the engine; AI cannot enable it.
 
@@ -90,8 +111,10 @@ See [active adventure rules and limitations](docs/ACTIVE_ADVENTURE.md),
 5. Challenge a nearby NPC or search the guarded ruins to enter combat. Try
    `Attack`, `Defend`, `Use Flowing Stream Palm`, `Move to high ground`, or `Retreat`.
 6. For AI, open **Settings**, enter your provider's complete HTTPS
-   **chat/completions** endpoint, model and key, then save and test it. Provider
-   calls may incur charges. No API key is included with the app.
+   **chat/completions** endpoint and key. Detect models or enter one manually, check
+   the context budget, enable provider calls and save. The saved profile restores
+   automatically. The explicit generation test/provider calls may incur charges.
+   No API key is included with the app.
 
 Unknown wording uses AI interpretation when configured, otherwise a bounded
 creative-attempt check. Conditional/negated commands need a clear immediate action
@@ -142,7 +165,8 @@ and APK artifacts. Core tests can also run locally with Kotlin 2.1.20 / Java 17:
 core/    Character generation, immutable state, validation, action interpreter,
          engine/combat/activity/world rules, read-only scene presentation, bounded AI context
 app/     Existing Compose shell and ViewModel, Room repository, DataStore,
-         v1/v2/v3 codec, Android file picker, compatible AI adapter and Keystore
+         v1/v2/v3 codec, Android file picker, compatible AI adapter and Keystore,
+         pooled async transport/SSE, model discovery and bounded public references
 scripts/ Dependency-free core checks and bounded CI diagnostics
 docs/    Rules, save contract, architecture, phase gates and test evidence
 ```
@@ -154,4 +178,6 @@ state-grounded story snapshots, and actual Android create → action → dialogu
 notice → menu → travel flows, plus a 320dp/130%-font keyboard/draft regression.
 Live paid-provider behavior and physical-device/file-picker/accessibility checks
 remain separately identified; mock-server tests are not represented as live-model
-verification. Network permission is used only for explicitly enabled/tested AI.
+verification. AI tests additionally cover pool reuse, streaming/cancellation,
+metadata, million-token budgets, targeted references and encrypted named profiles.
+Network use is limited to explicitly enabled/tested provider and reference features.

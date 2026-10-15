@@ -1,5 +1,36 @@
 # Architecture and authority boundaries
 
+## Connected-AI extension (0.4)
+
+The existing adapter and device DataStore remain the integration points. No
+campaign table or portable-save version changed. `AiPreferences` now stores a
+versioned set of named profiles in that same DataStore and migrates legacy values
+only after a successful atomic write. Android Keystore AES-GCM protects each key;
+unreadable ciphertext is preserved unless its own profile is explicitly repaired
+or deleted. Saves are bound to the edited profile ID.
+
+`AiTransport` shares an OkHttp pool/dispatcher, uses request-local credentials and
+cancellable asynchronous callbacks, and bounds response sizes/deadlines.
+`ModelDiscovery` reads compatible catalogs; explicit metadata is tied to endpoint,
+credential and selected model. Unknown capacity retains an editable manual fallback.
+`ContextBudget` checks a conservative byte-based estimate, not an exact tokenizer.
+`ChatStream` handles bounded SSE and throttled transient previews. Only complete,
+validated narration follows the existing persistence path; no streaming fragment
+can execute an action or become an accepted result.
+
+`GameViewModel` restores configuration at startup, manages cancellable metadata
+checks with epoch guards, and observes validated network transitions for bounded
+reconnection. It does not retry paid actions on network recovery. The native
+settings panel reuses existing state, controls and theme, adding model selection,
+independent context/output boxes, named profiles and opt-in source controls.
+
+`KnowledgeService` uses a separate unauthenticated public-document client with
+HTTPS/address guards and bounded targeted retrieval. It produces ephemeral,
+untrusted reference notes for narration, never database patches or player/NPC
+knowledge. Search queries exclude private action text unless the user explicitly
+enters a test query. Source previews allow inspection; references are not new
+campaign canon. See `AI_SETTINGS.md` for precise limits and provider boundaries.
+
 ## Living-story extension (0.3)
 
 `SceneNarrator` is a platform-independent, read-only presentation of the existing
@@ -145,7 +176,7 @@ Android OS auto-backup is disabled: explicit user exports are the supported
 cross-device backup route in this phase. SAF creates/opens documents without
 broad filesystem permissions.
 
-## Future modules — interfaces only today
+## Original foundation contracts — historical Phase 1 scope
 
 `GameEngine.apply` must be the sole normal-play mechanical authority. Every action
 must validate context, costs, targets, time bounds, and resulting state.
@@ -156,11 +187,11 @@ function. Even a syntactically valid proposed action is an untrusted request.
 `WorldGenerator` will persist locations, factions, and NPC identities once, rather
 than inventing them on every inspection.
 
-The current contracts do not make AI, combat, or world simulation functional.
-There are deliberately no inactive controls for them. Phase 3 must implement
-HTTP profile storage, secure credential handling, bounded/relevant context,
-cancellation/retry, errors, and output validation before enabling provider UI.
-No network permission is currently needed or declared.
+At Phase 1 these were interfaces only. The retained 0.2–0.4 extensions above now
+implement bounded combat/world mechanics and compatible AI with profiles, secure
+credentials, context limits, cancellation and output validation. INTERNET and
+ACCESS_NETWORK_STATE are declared for opt-in network features. The larger
+procedural-world milestone is still unfinished; no inactive controls pretend it exists.
 
 God Mode later uses a distinct, explicitly enabled command path through the
 same validation/persistence boundary, records real state edits, and displays a
