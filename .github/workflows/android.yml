@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
-    if: ${{ !inputs.preview_run }}
+    if: ${{ !inputs.preview_run && !contains(github.event.head_commit.message, '[preview-export:') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -92,15 +92,29 @@ jobs:
             app/build/outputs/ui-previews/
 
   preview-export:
-    if: ${{ inputs.preview_run != '' }}
+    if: ${{ inputs.preview_run != '' || contains(github.event.head_commit.message, '[preview-export:') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
+      - name: Select existing verified run
+        id: source
+        env:
+          PREVIEW_INPUT: ${{ inputs.preview_run }}
+          PREVIEW_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          python3 - <<'PY_SOURCE' >> "$GITHUB_OUTPUT"
+          import os, re
+          value = os.environ['PREVIEW_INPUT']
+          if not value:
+              value = re.search(r'\[preview-export:(\d+)\]', os.environ['PREVIEW_MESSAGE']).group(1)
+          assert value.isdigit()
+          print('run_id=' + value)
+          PY_SOURCE
       - uses: actions/download-artifact@v5
         with:
           name: device-test-reports-api-35
-          run-id: ${{ inputs.preview_run }}
+          run-id: ${{ steps.source.outputs.run_id }}
           github-token: ${{ github.token }}
           path: app/build
       # Runner permits only ten notices per step, each under 4 KiB.
