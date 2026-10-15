@@ -31,7 +31,8 @@ object AiTransport {
             override fun onResponse(call: Call, response: Response) {
                 val result = runCatching { response.use { parse(it) } }.recoverCatching {
                     if (it is AiFailure) throw it
-                    throw AiFailure("Response was malformed, too large or incomplete. Saved data is unchanged; use manual settings or retry explicitly.")
+                    if (it is IOException) throw AiFailure(ChatResponse.INTERRUPTED)
+                    throw AiFailure(ChatResponse.FORMAT)
                 }
                 if (continuation.isActive) result.fold({ continuation.resume(it) }, { continuation.resumeWithException(it) })
             }
@@ -48,7 +49,7 @@ object AiTransport {
             val n = source.read(buffer, minOf(8192L, limit + 1L - total))
             if (n < 0) break
             total += n
-            require(total <= limit) { "Response exceeded its size limit." }
+            if (total > limit) throw AiFailure(ChatResponse.TOO_LARGE)
         }
         return buffer.readUtf8()
     }

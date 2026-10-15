@@ -112,7 +112,7 @@ class AiProviderTest {
     @Test fun sceneBudgetAndPromptSupportGroundedLongFormWithoutPrivateContext() = runBlocking {
         MockWebServer().use { server ->
             server.start()
-            for ((pace, budget) in listOf("opening" to 1200, "scene" to 1200, "major" to 1200, "brief" to 650, "dialogue" to 650)) {
+            for ((pace, budget) in listOf("opening" to 1200, "scene" to 1200, "major" to 1200, "brief" to 1200, "dialogue" to 1200)) {
                 server.enqueue(MockResponse().setBody(envelope("The river continues to flow.")))
                 provider(server).narrate(context.copy(pace = pace, spokenDialogue = "Mei: Dewleaf grows near water.", recentOpenings = listOf("Avoid this opening.")))
                 val body = JSONObject(server.takeRequest(2, TimeUnit.SECONDS)!!.body.readUtf8())

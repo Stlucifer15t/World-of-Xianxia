@@ -166,7 +166,7 @@ internal fun AiSettingsPanel(state: GameUiState, model: GameViewModel) {
         if (tab != "Saved") {
             if (tab == "Setup") {
                 Button(onClick = { model.testAndSaveAi(config) }, enabled = !state.busy && config.endpoint.isNotBlank() && config.model.isNotBlank(), modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp)) { Text("Test connection & save") }
-                Text("Sends one short test. Your provider may charge. Saves only after success.", style = MaterialTheme.typography.bodySmall)
+                Text("Tests access with a short reply, not a full streamed story. Your provider may charge. Saves only after success.", style = MaterialTheme.typography.bodySmall)
             }
             OutlinedButton(onClick = { model.configureAi(config) }, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) { Text("Save without testing") }
         }

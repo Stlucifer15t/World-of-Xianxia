@@ -228,6 +228,26 @@ class OpeningFlowTest {
         assertEquals(old.player, active().player); assertEquals(old.randomState, active().randomState)
         assertTrue(active().adventure!!.history.last().narration.isEmpty())
     }
+    @Test fun compatibleStreamCompletionAndOutputLimitRecoveryPreserveSavedCharacterAndProse() {
+        fun stream(text: String, reason: String) = "data: {\"choices\":[{\"delta\":{\"content\":\"$text\"}}]}\n\n" +
+            "data: {\"choices\":[{\"finish_reason\":\"$reason\"}]}\n\n"
+        var response = stream(first, "stop") // clean EOF, no DONE or terminal delta
+        handler = { _, preview -> com.immortalworld.ai.ChatStream.read(okio.Buffer().writeUtf8(response), preview) }
+        ui { model.create("Compatible streamed opening") }; idle()
+        val before = active()
+        assertEquals(first, before.adventure!!.history.single().narration)
+        response = stream("Incomplete replacement.", "length")
+        regenerate(); idle()
+        assertTrue(model.state.value.aiNotice.orEmpty().contains("Increase Maximum output"))
+        assertFalse(model.state.value.aiNotice.orEmpty().contains("malformed"))
+        assertEquals(before, active())
+        assertEquals(before, runBlocking { app.saves.load(before.id).save })
+        response = stream(second, "stop")
+        regenerate(); idle()
+        assertEquals(3, requests.size)
+        assertEquals(mechanics(before), mechanics(active()))
+        assertEquals(second, active().adventure!!.history.single().narration)
+    }
     @Test fun latestActionRegenerationNeverReplaysItsTimeOrMechanics() {
         ui { model.create("Action regeneration") }; idle()
         ui { model.command(GameAction(ActionKind.REST), "Rest") }; idle()

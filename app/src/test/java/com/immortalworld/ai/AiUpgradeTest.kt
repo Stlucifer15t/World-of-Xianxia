@@ -38,7 +38,7 @@ class AiUpgradeTest {
         }
     }
     @Test fun incompleteStreamsNeverReturnAcceptedNarration() {
-        for (body in listOf(chunk("The river"), chunk("The river") + chunk(stop = true), "data: [DONE]\n\n", "data: {bad}\n\n")) {
+        for (body in listOf(chunk("The river"), "data: [DONE]\n\n", "data: {bad}\n\n")) {
             assertThrows(Exception::class.java) { ChatStream.read(Buffer().writeUtf8(body)) {} }
         }
     }
@@ -47,7 +47,7 @@ class AiUpgradeTest {
         assertThrows(Exception::class.java) { ChatStream.read(Buffer().writeUtf8(tooLong)) {} }
         val tools = "data: {\"choices\":[{\"delta\":{\"tool_calls\":[]},\"finish_reason\":null}]}\n\n"
         assertThrows(Exception::class.java) { ChatStream.read(Buffer().writeUtf8(tools)) {} }
-        assertThrows(Exception::class.java) { ChatStream.read(Buffer().writeUtf8("data: " + "x".repeat(17000) + "\n\n")) {} }
+        assertThrows(Exception::class.java) { ChatStream.read(Buffer().writeUtf8("data: " + "x".repeat(65537) + "\n\n")) {} }
     }
     @Test fun streamedAgencyViolationsAreNotAccepted() = runBlocking {
         MockWebServer().use { s ->

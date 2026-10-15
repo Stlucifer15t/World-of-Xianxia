@@ -11,8 +11,8 @@ android {
         applicationId = "com.immortalworld"
         minSdk = 26
         targetSdk = 35
-        versionCode = 8
-        versionName = "0.7.0-persistent-frontier"
+        versionCode = 9
+        versionName = "0.7.1-streaming-compatibility"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true }
